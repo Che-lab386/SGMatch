@@ -1,27 +1,84 @@
+import os
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 from .base_model import BaseModel
 from utils.registry import MODEL_REGISTRY
 from utils.tensor_util import to_device
 from utils.fmap_util import nn_query, trim_basis, hybrid_fmap2pointmap
-from utils.geometry_util import get_all_operators
-from utils.geometry_util import to_basis, from_basis
+from utils.geometry_util import get_all_operators, to_basis, from_basis
 from utils.neigh_util import get_neigh
+from utils.connection_laplacian import load_connection_cache
+from losses.rino_loss import FourBranchLoss
 
-def cache_operators(data, cache_dir=None):
+def cache_operators(data, cache_dir=None, complex_cache_dir=None, use_complex_fmap=False, n_conn=20):
+    """
+    缓存几何算子，包括标准 Laplacian 和可选的 connection Laplacian
+    
+    Args:
+        data: 数据字典，包含 'first' 和 'second'
+        cache_dir: 缓存目录
+        use_complex_fmap: 是否计算 connection Laplacian（用于 complex-Q 分支）
+        n_conn: connection Laplacian 特征数
+    """
     data_x, data_y = data['first'], data['second']
+    
     if 'operators' not in data_x.keys():
         cache_dir = cache_dir or data_x.get('cache_dir', None)
-        _, mass, L, evals, evecs, gradX, gradY = get_all_operators(data_x['verts'].cpu(), data_x['faces'].cpu(), k=128,
-                                                                    cache_dir=cache_dir)
+        _, mass, L, evals, evecs, gradX, gradY = get_all_operators(
+            data_x['verts'].cpu(), data_x['faces'].cpu(), k=128, cache_dir=cache_dir
+        )
         
-        data_x['operators'] = {'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs, 'gradX': gradX, 'gradY': gradY}
+        data_x['operators'] = {
+            'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs, 
+            'gradX': gradX, 'gradY': gradY
+        }
+        
+        if use_complex_fmap:
+            try:
+                if 'spec_grad' in data_x:
+                    data_x['operators'].update({
+                        'conn_evals': data_x['conn_evals'],
+                        'conn_evecs': data_x['conn_evecs'],
+                        'spec_grad': data_x['spec_grad'],
+                    })
+                else:
+                    verts = data_x['verts'].squeeze(0) if data_x['verts'].dim() == 3 else data_x['verts']
+                    faces = data_x['faces'].squeeze(0) if data_x['faces'].dim() == 3 else data_x['faces']
+                    cached = load_connection_cache(verts, faces, k=n_conn, cache_dir=complex_cache_dir)
+                    data_x['operators'].update(cached)
+            except Exception as e:
+                print(f"[警告] Connection Laplacian 计算失败: {e}")
+                print("       Complex-Q 分支将不可用，继续使用标准 C 分支")
+    
     if 'operators' not in data_y.keys():
         cache_dir = cache_dir or data_y.get('cache_dir', None)
-        _, mass, L, evals, evecs, gradX, gradY = get_all_operators(data_y['verts'].cpu(), data_y['faces'].cpu(), k=128,
-                                                                    cache_dir=cache_dir)
-        data_y['operators'] = {'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs, 'gradX': gradX, 'gradY': gradY}
+        _, mass, L, evals, evecs, gradX, gradY = get_all_operators(
+            data_y['verts'].cpu(), data_y['faces'].cpu(), k=128, cache_dir=cache_dir
+        )
+        
+        data_y['operators'] = {
+            'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs,
+            'gradX': gradX, 'gradY': gradY
+        }
+        
+        if use_complex_fmap:
+            try:
+                if 'spec_grad' in data_y:
+                    data_y['operators'].update({
+                        'conn_evals': data_y['conn_evals'],
+                        'conn_evecs': data_y['conn_evecs'],
+                        'spec_grad': data_y['spec_grad'],
+                    })
+                else:
+                    verts = data_y['verts'].squeeze(0) if data_y['verts'].dim() == 3 else data_y['verts']
+                    faces = data_y['faces'].squeeze(0) if data_y['faces'].dim() == 3 else data_y['faces']
+                    cached = load_connection_cache(verts, faces, k=n_conn, cache_dir=complex_cache_dir)
+                    data_y['operators'].update(cached)
+            except Exception as e:
+                print(f"[警告] Connection Laplacian 计算失败: {e}")
+                print("       Complex-Q 分支将不可用，继续使用标准 C 分支")
 
 @MODEL_REGISTRY.register()
 class SGMatch_Model(BaseModel):
@@ -38,7 +95,12 @@ class SGMatch_Model(BaseModel):
 
     def feed_data(self, data):
         cache_dir = self.opt['networks']['feature_extractor'].get('cache_dir', None)
-        cache_operators(data, cache_dir=cache_dir)
+        complex_cache_dir = self.opt.get('complex_cache_dir', os.path.join(os.path.dirname(cache_dir), 'complex'))
+        use_complex_fmap = self.opt.get('use_complex_fmap', False)
+        n_conn = self.opt.get('n_conn', 20)
+        
+        cache_operators(data, cache_dir=cache_dir, complex_cache_dir=complex_cache_dir,
+                        use_complex_fmap=use_complex_fmap, n_conn=n_conn)
         # get data pair
         data_x, data_y = to_device(data['first'], self.device), to_device(data['second'], self.device)
 
@@ -121,6 +183,49 @@ class SGMatch_Model(BaseModel):
             if not self.partial:
                 elas_Cyx_est = torch.bmm(elas_evecs_trans_x, torch.bmm(Pxy, elas_evecs_y))
                 self.loss_metrics['l_elas_align'] += self.losses['hs_align_loss'](elas_Cyx, elas_Cyx_est, elas_sqrtMk_y, elas_sqrtMk_x)
+        
+        # ------------------- Q branch and RINO-style losses ------------------- #
+        if use_complex_fmap and 'spec_grad' in data_x['operators'] and 'spec_grad' in data_y['operators']:
+            try:
+                spec_grad_x = data_x['operators']['spec_grad'].to(self.device)
+                spec_grad_y = data_y['operators']['spec_grad'].to(self.device)
+                feat_x_complex = torch.matmul(spec_grad_x, hx.squeeze(0).to(torch.complex128))
+                feat_y_complex = torch.matmul(spec_grad_y, hy.squeeze(0).to(torch.complex128))
+
+                # DUO/RINO CFMap least-squares estimate. Q is kept separate
+                # from C because the two matrices use different bases.
+                Qxy = torch.matmul(feat_y_complex, torch.linalg.pinv(feat_x_complex))
+                Qyx = None if self.partial else torch.matmul(
+                    feat_x_complex, torch.linalg.pinv(feat_y_complex))
+                Qxy = Qxy.unsqueeze(0)
+                if Qyx is not None:
+                    Qyx = Qyx.unsqueeze(0)
+
+                q_loss = FourBranchLoss(
+                    w_c_orth=0.0,
+                    w_q_orth=1.0,
+                    w_c_bij=0.0,
+                    w_pc=0.0,
+                    w_pq=0.0,
+                    w_contr=0.0,
+                    contrastive_scale=6.0,
+                )(
+                    Cxy=Cxy,
+                    Cyx=Cyx,
+                    Qxy=Qxy,
+                    Qyx=Qyx,
+                    Pxy=Pxy,
+                    Pyx=Pyx,
+                    evecs_x=evecs_x,
+                    evecs_y=evecs_y,
+                    evecs_trans_x=evecs_trans_x,
+                    evecs_trans_y=evecs_trans_y,
+                    features_x=hx,
+                    features_y=hy,
+                )
+                self.loss_metrics.update(q_loss)
+            except Exception as e:
+                print(f"[警告] Complex-Q 前向传播失败: {e}")
         
         if 'dirichlet_loss' in self.losses:
             Lx, Ly = data_x['operators']['L'], data_y['operators']['L']

@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 from utils.shape_util import read_shape
 from utils.geometry_util import get_operators, get_elas_operators
 from utils.tensor_util import to_numpy
+from utils.connection_laplacian import load_connection_cache
 from utils.registry import DATASET_REGISTRY
 
 from tqdm import tqdm
@@ -107,7 +108,7 @@ class SingleShapeDataset(Dataset):
     def __init__(self,
                  data_root, return_faces=True,
                  return_evecs=True, num_evecs=200,
-                 return_corr=True, return_dist=False, return_elas_evecs=False, bending_weight=1e-2, cache=True, return_dino=False, dino_folder="dino"):
+                 return_corr=True, return_dist=False, return_elas_evecs=False, bending_weight=1e-2, cache=True, return_dino=False, dino_folder="dino", return_complex=False, complex_cache_dir=None, n_conn=20):
         """
         Single Shape Dataset
 
@@ -131,6 +132,10 @@ class SingleShapeDataset(Dataset):
         self.return_dist = return_dist
         self.return_dino = return_dino
         self.num_evecs = num_evecs
+        self.return_complex = return_complex
+        self.complex_cache_dir = complex_cache_dir or os.path.join(data_root, 'complex')
+        self.n_conn = n_conn
+
         self.return_elas_evecs = return_elas_evecs
         self.bending_weight = bending_weight
 
@@ -166,6 +171,8 @@ class SingleShapeDataset(Dataset):
             cache_path_name = os.path.join(self.data_root, 'cache', str(self.num_evecs)+'_'+self.phase+"_dataset.pt")
             if self.return_elas_evecs:
                 cache_path_name = os.path.join(self.data_root, 'cache', str(self.bending_weight)+'_'+str(self.num_evecs)+'_'+self.phase+"_elas_dataset.pt")
+            if self.return_complex:
+                cache_path_name = cache_path_name.replace('_dataset.pt', '_complex_dataset.pt').replace('_elas_complex_dataset.pt', '_complex_elas_dataset.pt')
             print("using dataset cache path: " + str(cache_path_name))
             if os.path.exists(cache_path_name):
                 print("  --> loading dataset from cache")
@@ -197,7 +204,10 @@ class SingleShapeDataset(Dataset):
                 if self.return_elas_evecs:
                     item = get_elas_spectral_ops(item, num_evecs=self.num_evecs, bending_weight=self.bending_weight, cache_dir=os.path.join(self.data_root, 'elastic'))
 
-                # get correspondences
+                if self.return_complex:
+                    item.update(load_connection_cache(
+                        item['verts'], item['faces'], self.n_conn, self.complex_cache_dir))
+
                 if self.return_corr:
                     corr = np.loadtxt(self.corr_files[index], dtype=np.int32) - 1  # minus 1 to start from 0
                     item['corr'] = torch.from_numpy(corr).long()

@@ -110,12 +110,24 @@ def train_pipeline(root_path):
     logger.info(f'Start training from epoch: {model.curr_epoch}, iter: {model.curr_iter}')
     data_timer, iter_timer = AvgTimer(), AvgTimer()
     start_time = time.time()
+    iters_per_epoch = len(train_loader)
 
     try:
-        while model.curr_epoch < total_epochs:
-            model.curr_epoch += 1
+        # a mid-epoch checkpoint may belong to the final epoch, so keep going
+        # while the current epoch is unfinished
+        while model.curr_epoch < total_epochs or model.curr_iter % iters_per_epoch:
+            # advance the epoch only when the previous one is complete, so a
+            # checkpoint saved mid-epoch resumes inside that epoch instead of
+            # skipping its remaining iterations
+            if model.curr_iter % iters_per_epoch == 0:
+                model.curr_epoch += 1
             train_sampler.set_epoch(model.curr_epoch)
+            # skip the batches already consumed before the checkpoint was saved
+            skip_iters = model.curr_iter % iters_per_epoch
             for train_data in train_loader:
+                if skip_iters > 0:
+                    skip_iters -= 1
+                    continue
                 data_timer.record()
 
                 model.curr_iter += 1
