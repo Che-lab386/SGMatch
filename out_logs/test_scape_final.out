@@ -1,0 +1,1400 @@
+Backend DataParallel.
+Path already exists. Rename it to /T20120005/cfs/SGMatch-main/SGMatch-main/results/scape20261114_141827
+2026-11-14 14:18:27,544 INFO: 
+Version Information: 
+	Python: 3.10.22
+	PyTorch: 2.3.0+cu121
+	TorchVision: 0.18.0+cu121
+2026-11-14 14:18:27,544 INFO: 
+  backend: dp
+  type: SGMatch_Model
+  num_gpu: 1
+  manual_seed: 1234
+  heat_diffusion_tau: 0.01
+  use_diffusion: True
+  n_lb: 140
+  n_elas: 60
+  refine: 15
+  non-isometric: False
+  partial: False
+  visualize: False
+  path:[
+    resume_state: experiments/scape/models/final.pth
+    resume: False
+    results_root: /T20120005/cfs/SGMatch-main/SGMatch-main/results/scape
+    log: /T20120005/cfs/SGMatch-main/SGMatch-main/results/scape/log
+    visualization: /T20120005/cfs/SGMatch-main/SGMatch-main/results/scape/visualization
+    pcks: /T20120005/cfs/SGMatch-main/SGMatch-main/results/scape/pcks
+    heatmaps: /T20120005/cfs/SGMatch-main/SGMatch-main/results/scape/heatmaps
+  ]
+  datasets:[
+    test_dataset:[
+      name: Val
+      type: PairScapeDataset
+      phase: test
+      data_root: data/SCAPE_r
+      return_evecs: True
+      return_faces: True
+      num_evecs: 200
+      return_corr: True
+      return_dist: True
+      return_elas_evecs: True
+      bending_weight: 0.01
+      return_dino: True
+    ]
+  ]
+  networks:[
+    feature_extractor:[
+      type: DiffusionNet
+      in_channels: 3
+      out_channels: 256
+      cache_dir: data/SCAPE_r/diffusion
+      input_type: xyz
+    ]
+    fmap_net:[
+      type: RegularizedFMNet
+      bidirectional: False
+    ]
+    expanded_fmap_net:[
+      type: ExpandedResolventFMNet
+      lmbda: 50
+      bidirectional: True
+    ]
+    permutation:[
+      type: Similarity
+      tau: 0.07
+      hard: True
+    ]
+    flow_field:[
+      type: FlowField
+      in_channels: 256
+      hidden_dim: 512
+      depth: 4
+    ]
+    cross_attention:[
+      type: CrossAttentionFusion
+      geo_dim: 256
+      sem_dim: 768
+      attn_dim: 256
+      num_heads: 8
+    ]
+  ]
+  train:[
+    optims:[
+      feature_extractor:[
+        type: Adam
+        lr: 0.001
+      ]
+      flow_field:[
+        type: Adam
+        lr: 0.001
+      ]
+      cross_attention:[
+        type: Adam
+        lr: 0.001
+      ]
+    ]
+    schedulers:[
+      feature_extractor:[
+        type: none
+      ]
+      flow_field:[
+        type: none
+      ]
+      cross_attention:[
+        type: none
+      ]
+    ]
+    losses:[
+      surfmnet_loss:[
+        type: SURFMNetLoss
+        w_bij: 1.0
+        w_orth: 1.0
+        w_lap: 0.0
+      ]
+      hs_surfmnet_loss:[
+        type: HS_SURFMNetLoss
+        w_bij: 1.0
+        w_orth: 0.0
+        w_lap: 0.0
+      ]
+      align_loss:[
+        type: SquaredFrobeniusLoss
+        loss_weight: 1.0
+      ]
+      hs_align_loss:[
+        type: SquaredHilbertSchmidtLoss
+        loss_weight: 1.0
+      ]
+      flow_matching_loss:[
+        type: FlowMatchingLoss
+        loss_weight: 100.0
+        sample_ratio: 0.5
+        alpha: 2.0
+      ]
+      dirichlet_loss:[
+        type: DirichletLoss
+        loss_weight: 5.0
+      ]
+    ]
+  ]
+  val:[
+    save_geo_errors: True
+    metrics:[
+      geo_error:[
+        type: calculate_geodesic_error
+      ]
+      plot_pck_per_pair:[
+        type: plot_pck_multiple
+      ]
+      plot_pck:[
+        type: plot_pck
+      ]
+    ]
+  ]
+  name: scape
+  is_train: False
+  dist: False
+  rank: 0
+  world_size: 1
+
+using dataset cache path: data/SCAPE_r/cache/0.01_200_test_elas_dataset.pt
+  --> loading dataset from cache
+2026-11-14 14:18:29,029 INFO: Dataset [PairScapeDataset]-[Val] is built.
+2026-11-14 14:18:29,030 INFO: Number of test images in Val: 400
+2026-11-14 14:18:29,061 INFO: Network [DiffusionNet] is created.
+2026-11-14 14:18:29,061 INFO: Network [RegularizedFMNet] is created.
+2026-11-14 14:18:29,062 INFO: Network [ExpandedResolventFMNet] is created.
+2026-11-14 14:18:29,062 INFO: Network [Similarity] is created.
+2026-11-14 14:18:29,081 INFO: Network [FlowField] is created.
+2026-11-14 14:18:29,092 INFO: Network [CrossAttentionFusion] is created.
+2026-11-14 14:18:29,271 INFO: Network: DiffusionNet, with parameters: 494,336
+2026-11-14 14:18:29,271 INFO: Network: RegularizedFMNet, with parameters: 0
+2026-11-14 14:18:29,271 INFO: Network: ExpandedResolventFMNet, with parameters: 0
+2026-11-14 14:18:29,271 INFO: Network: Similarity, with parameters: 0
+2026-11-14 14:18:29,271 INFO: Network: FlowField, with parameters: 1,250,560
+2026-11-14 14:18:29,272 INFO: Network: CrossAttentionFusion, with parameters: 1,119,232
+2026-11-14 14:18:29,272 INFO: Metric [function] is created.
+2026-11-14 14:18:29,272 INFO: Metric [function] is created.
+2026-11-14 14:18:29,272 INFO: Metric [function] is created.
+2026-11-14 14:18:29,273 INFO: Network fmap_net has no param to optimize. Ignore it.
+2026-11-14 14:18:29,273 INFO: Network expanded_fmap_net has no param to optimize. Ignore it.
+2026-11-14 14:18:29,273 INFO: Network permutation has no param to optimize. Ignore it.
+2026-11-14 14:18:29,274 INFO: Loss [SURFMNetLoss] is created.
+2026-11-14 14:18:29,274 INFO: Loss [HS_SURFMNetLoss] is created.
+2026-11-14 14:18:29,274 INFO: Loss [SquaredFrobeniusLoss] is created.
+2026-11-14 14:18:29,274 INFO: Loss [SquaredHilbertSchmidtLoss] is created.
+2026-11-14 14:18:29,275 INFO: Loss [FlowMatchingLoss] is created.
+2026-11-14 14:18:29,275 INFO: Loss [DirichletLoss] is created.
+2026-11-14 14:18:29,300 INFO: Resuming network: feature_extractor
+2026-11-14 14:18:29,300 INFO: Network fmap_net has no param. Ignore it.
+2026-11-14 14:18:29,301 INFO: Network expanded_fmap_net has no param. Ignore it.
+2026-11-14 14:18:29,301 INFO: Network permutation has no param. Ignore it.
+2026-11-14 14:18:29,301 INFO: Resuming network: flow_field
+2026-11-14 14:18:29,302 INFO: Resuming network: cross_attention
+2026-11-14 14:18:29,302 INFO: Model [SGMatch_Model] is created.
+2026-11-14 14:18:29,302 INFO: Testing PairScapeDataset...
+  0%|          | 0/400 [00:00<?, ?it/s]mesh052 mesh052 0.0
+mesh052 mesh052 0.0
+geo error: 0.0000:   0%|          | 0/400 [00:10<?, ?it/s]current mean geo error: 0.0000
+geo error: 0.0000:   0%|          | 1/400 [00:10<1:07:25, 10.14s/it]mesh052 mesh053 0.013767364
+mesh052 mesh053 0.013767364
+geo error: 0.0138:   0%|          | 1/400 [00:19<1:07:25, 10.14s/it]current mean geo error: 0.0069
+geo error: 0.0138:   0%|          | 2/400 [00:19<1:03:25,  9.56s/it]mesh052 mesh054 0.015605463
+mesh052 mesh054 0.015605463
+geo error: 0.0156:   0%|          | 2/400 [00:28<1:03:25,  9.56s/it]current mean geo error: 0.0098
+geo error: 0.0156:   1%|          | 3/400 [00:28<1:01:41,  9.32s/it]mesh052 mesh055 0.026977476
+mesh052 mesh055 0.026977476
+geo error: 0.0270:   1%|          | 3/400 [00:37<1:01:41,  9.32s/it]current mean geo error: 0.0141
+geo error: 0.0270:   1%|          | 4/400 [00:37<1:00:36,  9.18s/it]mesh052 mesh056 0.020387191
+mesh052 mesh056 0.020387191
+geo error: 0.0204:   1%|          | 4/400 [00:46<1:00:36,  9.18s/it]current mean geo error: 0.0153
+geo error: 0.0204:   1%|▏         | 5/400 [00:46<1:00:15,  9.15s/it]mesh052 mesh057 0.022481505
+mesh052 mesh057 0.022481505
+geo error: 0.0225:   1%|▏         | 5/400 [00:55<1:00:15,  9.15s/it]current mean geo error: 0.0165
+geo error: 0.0225:   2%|▏         | 6/400 [00:55<59:48,  9.11s/it]  mesh052 mesh058 0.02314735
+mesh052 mesh058 0.02314735
+geo error: 0.0231:   2%|▏         | 6/400 [01:04<59:48,  9.11s/it]current mean geo error: 0.0175
+geo error: 0.0231:   2%|▏         | 7/400 [01:04<59:24,  9.07s/it]mesh052 mesh059 0.020306777
+mesh052 mesh059 0.020306777
+geo error: 0.0203:   2%|▏         | 7/400 [01:13<59:24,  9.07s/it]current mean geo error: 0.0178
+geo error: 0.0203:   2%|▏         | 8/400 [01:13<59:17,  9.08s/it]mesh052 mesh060 0.017984116
+mesh052 mesh060 0.017984116
+geo error: 0.0180:   2%|▏         | 8/400 [01:22<59:17,  9.08s/it]current mean geo error: 0.0179
+geo error: 0.0180:   2%|▏         | 9/400 [01:22<58:58,  9.05s/it]mesh052 mesh061 0.016237566
+mesh052 mesh061 0.016237566
+geo error: 0.0162:   2%|▏         | 9/400 [01:31<58:58,  9.05s/it]current mean geo error: 0.0177
+geo error: 0.0162:   2%|▎         | 10/400 [01:31<58:44,  9.04s/it]mesh052 mesh062 0.019571342
+mesh052 mesh062 0.019571342
+geo error: 0.0196:   2%|▎         | 10/400 [01:40<58:44,  9.04s/it]current mean geo error: 0.0179
+geo error: 0.0196:   3%|▎         | 11/400 [01:40<58:31,  9.03s/it]mesh052 mesh063 0.018032974
+mesh052 mesh063 0.018032974
+geo error: 0.0180:   3%|▎         | 11/400 [01:49<58:31,  9.03s/it]current mean geo error: 0.0179
+geo error: 0.0180:   3%|▎         | 12/400 [01:49<58:41,  9.08s/it]mesh052 mesh064 0.017773995
+mesh052 mesh064 0.017773995
+geo error: 0.0178:   3%|▎         | 12/400 [01:59<58:41,  9.08s/it]current mean geo error: 0.0179
+geo error: 0.0178:   3%|▎         | 13/400 [01:59<59:23,  9.21s/it]mesh052 mesh065 0.023379603
+mesh052 mesh065 0.023379603
+geo error: 0.0234:   3%|▎         | 13/400 [02:08<59:23,  9.21s/it]current mean geo error: 0.0183
+geo error: 0.0234:   4%|▎         | 14/400 [02:08<59:39,  9.27s/it]mesh052 mesh066 0.017723273
+mesh052 mesh066 0.017723273
+geo error: 0.0177:   4%|▎         | 14/400 [02:18<59:39,  9.27s/it]current mean geo error: 0.0182
+geo error: 0.0177:   4%|▍         | 15/400 [02:18<1:00:05,  9.37s/it]mesh052 mesh067 0.02177381
+mesh052 mesh067 0.02177381
+geo error: 0.0218:   4%|▍         | 15/400 [02:27<1:00:05,  9.37s/it]current mean geo error: 0.0184
+geo error: 0.0218:   4%|▍         | 16/400 [02:27<59:50,  9.35s/it]  mesh052 mesh068 0.019365413
+mesh052 mesh068 0.019365413
+geo error: 0.0194:   4%|▍         | 16/400 [02:36<59:50,  9.35s/it]current mean geo error: 0.0185
+geo error: 0.0194:   4%|▍         | 17/400 [02:36<59:24,  9.31s/it]mesh052 mesh069 0.020725593
+mesh052 mesh069 0.020725593
+geo error: 0.0207:   4%|▍         | 17/400 [02:45<59:24,  9.31s/it]current mean geo error: 0.0186
+geo error: 0.0207:   4%|▍         | 18/400 [02:45<59:00,  9.27s/it]mesh052 mesh070 0.019449063
+mesh052 mesh070 0.019449063
+geo error: 0.0194:   4%|▍         | 18/400 [02:55<59:00,  9.27s/it]current mean geo error: 0.0187
+geo error: 0.0194:   5%|▍         | 19/400 [02:55<58:55,  9.28s/it]mesh052 mesh071 0.02959304
+mesh052 mesh071 0.02959304
+geo error: 0.0296:   5%|▍         | 19/400 [03:04<58:55,  9.28s/it]current mean geo error: 0.0192
+geo error: 0.0296:   5%|▌         | 20/400 [03:04<58:38,  9.26s/it]mesh053 mesh052 0.013771286
+mesh053 mesh052 0.013771286
+geo error: 0.0138:   5%|▌         | 20/400 [03:13<58:38,  9.26s/it]current mean geo error: 0.0190
+geo error: 0.0138:   5%|▌         | 21/400 [03:13<58:32,  9.27s/it]mesh053 mesh053 0.0
+mesh053 mesh053 0.0
+geo error: 0.0000:   5%|▌         | 21/400 [03:22<58:32,  9.27s/it]current mean geo error: 0.0181
+geo error: 0.0000:   6%|▌         | 22/400 [03:22<58:15,  9.25s/it]mesh053 mesh054 0.016938282
+mesh053 mesh054 0.016938282
+geo error: 0.0169:   6%|▌         | 22/400 [03:32<58:15,  9.25s/it]current mean geo error: 0.0180
+geo error: 0.0169:   6%|▌         | 23/400 [03:32<57:58,  9.23s/it]mesh053 mesh055 0.027907858
+mesh053 mesh055 0.027907858
+geo error: 0.0279:   6%|▌         | 23/400 [03:41<57:58,  9.23s/it]current mean geo error: 0.0185
+geo error: 0.0279:   6%|▌         | 24/400 [03:41<57:38,  9.20s/it]mesh053 mesh056 0.020973403
+mesh053 mesh056 0.020973403
+geo error: 0.0210:   6%|▌         | 24/400 [03:50<57:38,  9.20s/it]current mean geo error: 0.0186
+geo error: 0.0210:   6%|▋         | 25/400 [03:50<57:06,  9.14s/it]mesh053 mesh057 0.022455405
+mesh053 mesh057 0.022455405
+geo error: 0.0225:   6%|▋         | 25/400 [03:59<57:06,  9.14s/it]current mean geo error: 0.0187
+geo error: 0.0225:   6%|▋         | 26/400 [03:59<57:03,  9.15s/it]mesh053 mesh058 0.02074399
+mesh053 mesh058 0.02074399
+geo error: 0.0207:   6%|▋         | 26/400 [04:08<57:03,  9.15s/it]current mean geo error: 0.0188
+geo error: 0.0207:   7%|▋         | 27/400 [04:08<56:50,  9.14s/it]mesh053 mesh059 0.020452287
+mesh053 mesh059 0.020452287
+geo error: 0.0205:   7%|▋         | 27/400 [04:17<56:50,  9.14s/it]current mean geo error: 0.0188
+geo error: 0.0205:   7%|▋         | 28/400 [04:17<56:45,  9.16s/it]mesh053 mesh060 0.016012238
+mesh053 mesh060 0.016012238
+geo error: 0.0160:   7%|▋         | 28/400 [04:26<56:45,  9.16s/it]current mean geo error: 0.0187
+geo error: 0.0160:   7%|▋         | 29/400 [04:26<56:41,  9.17s/it]mesh053 mesh061 0.016384058
+mesh053 mesh061 0.016384058
+geo error: 0.0164:   7%|▋         | 29/400 [04:36<56:41,  9.17s/it]current mean geo error: 0.0187
+geo error: 0.0164:   8%|▊         | 30/400 [04:36<56:57,  9.24s/it]mesh053 mesh062 0.019219356
+mesh053 mesh062 0.019219356
+geo error: 0.0192:   8%|▊         | 30/400 [04:45<56:57,  9.24s/it]current mean geo error: 0.0187
+geo error: 0.0192:   8%|▊         | 31/400 [04:45<56:32,  9.19s/it]mesh053 mesh063 0.019375138
+mesh053 mesh063 0.019375138
+geo error: 0.0194:   8%|▊         | 31/400 [04:54<56:32,  9.19s/it]current mean geo error: 0.0187
+geo error: 0.0194:   8%|▊         | 32/400 [04:54<56:01,  9.13s/it]mesh053 mesh064 0.019386489
+mesh053 mesh064 0.019386489
+geo error: 0.0194:   8%|▊         | 32/400 [05:03<56:01,  9.13s/it]current mean geo error: 0.0187
+geo error: 0.0194:   8%|▊         | 33/400 [05:03<55:50,  9.13s/it]mesh053 mesh065 0.021514867
+mesh053 mesh065 0.021514867
+geo error: 0.0215:   8%|▊         | 33/400 [05:12<55:50,  9.13s/it]current mean geo error: 0.0188
+geo error: 0.0215:   8%|▊         | 34/400 [05:12<55:48,  9.15s/it]mesh053 mesh066 0.016293176
+mesh053 mesh066 0.016293176
+geo error: 0.0163:   8%|▊         | 34/400 [05:21<55:48,  9.15s/it]current mean geo error: 0.0187
+geo error: 0.0163:   9%|▉         | 35/400 [05:21<55:25,  9.11s/it]mesh053 mesh067 0.019618189
+mesh053 mesh067 0.019618189
+geo error: 0.0196:   9%|▉         | 35/400 [05:30<55:25,  9.11s/it]current mean geo error: 0.0188
+geo error: 0.0196:   9%|▉         | 36/400 [05:30<55:03,  9.07s/it]mesh053 mesh068 0.020389823
+mesh053 mesh068 0.020389823
+geo error: 0.0204:   9%|▉         | 36/400 [05:39<55:03,  9.07s/it]current mean geo error: 0.0188
+geo error: 0.0204:   9%|▉         | 37/400 [05:39<54:45,  9.05s/it]mesh053 mesh069 0.02073112
+mesh053 mesh069 0.02073112
+geo error: 0.0207:   9%|▉         | 37/400 [05:48<54:45,  9.05s/it]current mean geo error: 0.0189
+geo error: 0.0207:  10%|▉         | 38/400 [05:48<54:39,  9.06s/it]mesh053 mesh070 0.01824437
+mesh053 mesh070 0.01824437
+geo error: 0.0182:  10%|▉         | 38/400 [05:57<54:39,  9.06s/it]current mean geo error: 0.0188
+geo error: 0.0182:  10%|▉         | 39/400 [05:57<54:35,  9.07s/it]mesh053 mesh071 0.033259477
+mesh053 mesh071 0.033259477
+geo error: 0.0333:  10%|▉         | 39/400 [06:07<54:35,  9.07s/it]current mean geo error: 0.0192
+geo error: 0.0333:  10%|█         | 40/400 [06:07<54:30,  9.08s/it]mesh054 mesh052 0.015114658
+mesh054 mesh052 0.015114658
+geo error: 0.0151:  10%|█         | 40/400 [06:16<54:30,  9.08s/it]current mean geo error: 0.0191
+geo error: 0.0151:  10%|█         | 41/400 [06:16<54:22,  9.09s/it]mesh054 mesh053 0.016663693
+mesh054 mesh053 0.016663693
+geo error: 0.0167:  10%|█         | 41/400 [06:25<54:22,  9.09s/it]current mean geo error: 0.0190
+geo error: 0.0167:  10%|█         | 42/400 [06:25<54:14,  9.09s/it]mesh054 mesh054 0.0
+mesh054 mesh054 0.0
+geo error: 0.0000:  10%|█         | 42/400 [06:34<54:14,  9.09s/it]current mean geo error: 0.0186
+geo error: 0.0000:  11%|█         | 43/400 [06:34<54:06,  9.09s/it]mesh054 mesh055 0.02566328
+mesh054 mesh055 0.02566328
+geo error: 0.0257:  11%|█         | 43/400 [06:43<54:06,  9.09s/it]current mean geo error: 0.0188
+geo error: 0.0257:  11%|█         | 44/400 [06:43<54:08,  9.12s/it]mesh054 mesh056 0.022495285
+mesh054 mesh056 0.022495285
+geo error: 0.0225:  11%|█         | 44/400 [06:52<54:08,  9.12s/it]current mean geo error: 0.0188
+geo error: 0.0225:  11%|█▏        | 45/400 [06:52<53:58,  9.12s/it]mesh054 mesh057 0.02590437
+mesh054 mesh057 0.02590437
+geo error: 0.0259:  11%|█▏        | 45/400 [07:01<53:58,  9.12s/it]current mean geo error: 0.0190
+geo error: 0.0259:  12%|█▏        | 46/400 [07:01<53:57,  9.15s/it]mesh054 mesh058 0.02625018
+mesh054 mesh058 0.02625018
+geo error: 0.0263:  12%|█▏        | 46/400 [07:10<53:57,  9.15s/it]current mean geo error: 0.0191
+geo error: 0.0263:  12%|█▏        | 47/400 [07:10<53:43,  9.13s/it]mesh054 mesh059 0.024482416
+mesh054 mesh059 0.024482416
+geo error: 0.0245:  12%|█▏        | 47/400 [07:20<53:43,  9.13s/it]current mean geo error: 0.0193
+geo error: 0.0245:  12%|█▏        | 48/400 [07:20<53:42,  9.16s/it]mesh054 mesh060 0.022280853
+mesh054 mesh060 0.022280853
+geo error: 0.0223:  12%|█▏        | 48/400 [07:29<53:42,  9.16s/it]current mean geo error: 0.0193
+geo error: 0.0223:  12%|█▏        | 49/400 [07:29<53:17,  9.11s/it]mesh054 mesh061 0.018734995
+mesh054 mesh061 0.018734995
+geo error: 0.0187:  12%|█▏        | 49/400 [07:38<53:17,  9.11s/it]current mean geo error: 0.0193
+geo error: 0.0187:  12%|█▎        | 50/400 [07:38<53:05,  9.10s/it]mesh054 mesh062 0.020838944
+mesh054 mesh062 0.020838944
+geo error: 0.0208:  12%|█▎        | 50/400 [07:47<53:05,  9.10s/it]current mean geo error: 0.0193
+geo error: 0.0208:  13%|█▎        | 51/400 [07:47<52:54,  9.10s/it]mesh054 mesh063 0.021590948
+mesh054 mesh063 0.021590948
+geo error: 0.0216:  13%|█▎        | 51/400 [07:56<52:54,  9.10s/it]current mean geo error: 0.0194
+geo error: 0.0216:  13%|█▎        | 52/400 [07:56<52:39,  9.08s/it]mesh054 mesh064 0.020677801
+mesh054 mesh064 0.020677801
+geo error: 0.0207:  13%|█▎        | 52/400 [08:05<52:39,  9.08s/it]current mean geo error: 0.0194
+geo error: 0.0207:  13%|█▎        | 53/400 [08:05<52:29,  9.08s/it]mesh054 mesh065 0.02614379
+mesh054 mesh065 0.02614379
+geo error: 0.0261:  13%|█▎        | 53/400 [08:14<52:29,  9.08s/it]current mean geo error: 0.0195
+geo error: 0.0261:  14%|█▎        | 54/400 [08:14<52:22,  9.08s/it]mesh054 mesh066 0.020941798
+mesh054 mesh066 0.020941798
+geo error: 0.0209:  14%|█▎        | 54/400 [08:23<52:22,  9.08s/it]current mean geo error: 0.0196
+geo error: 0.0209:  14%|█▍        | 55/400 [08:23<52:18,  9.10s/it]mesh054 mesh067 0.023967087
+mesh054 mesh067 0.023967087
+geo error: 0.0240:  14%|█▍        | 55/400 [08:32<52:18,  9.10s/it]current mean geo error: 0.0196
+geo error: 0.0240:  14%|█▍        | 56/400 [08:32<52:27,  9.15s/it]mesh054 mesh068 0.02144938
+mesh054 mesh068 0.02144938
+geo error: 0.0214:  14%|█▍        | 56/400 [08:42<52:27,  9.15s/it]current mean geo error: 0.0197
+geo error: 0.0214:  14%|█▍        | 57/400 [08:42<52:15,  9.14s/it]mesh054 mesh069 0.020988926
+mesh054 mesh069 0.020988926
+geo error: 0.0210:  14%|█▍        | 57/400 [08:51<52:15,  9.14s/it]current mean geo error: 0.0197
+geo error: 0.0210:  14%|█▍        | 58/400 [08:51<52:01,  9.13s/it]mesh054 mesh070 0.019842492
+mesh054 mesh070 0.019842492
+geo error: 0.0198:  14%|█▍        | 58/400 [09:00<52:01,  9.13s/it]current mean geo error: 0.0197
+geo error: 0.0198:  15%|█▍        | 59/400 [09:00<51:49,  9.12s/it]mesh054 mesh071 0.02625238
+mesh054 mesh071 0.02625238
+geo error: 0.0263:  15%|█▍        | 59/400 [09:09<51:49,  9.12s/it]current mean geo error: 0.0198
+geo error: 0.0263:  15%|█▌        | 60/400 [09:09<51:40,  9.12s/it]mesh055 mesh052 0.026837261
+mesh055 mesh052 0.026837261
+geo error: 0.0268:  15%|█▌        | 60/400 [09:18<51:40,  9.12s/it]current mean geo error: 0.0199
+geo error: 0.0268:  15%|█▌        | 61/400 [09:18<51:36,  9.13s/it]mesh055 mesh053 0.027292078
+mesh055 mesh053 0.027292078
+geo error: 0.0273:  15%|█▌        | 61/400 [09:27<51:36,  9.13s/it]current mean geo error: 0.0200
+geo error: 0.0273:  16%|█▌        | 62/400 [09:27<51:33,  9.15s/it]mesh055 mesh054 0.024867903
+mesh055 mesh054 0.024867903
+geo error: 0.0249:  16%|█▌        | 62/400 [09:36<51:33,  9.15s/it]current mean geo error: 0.0201
+geo error: 0.0249:  16%|█▌        | 63/400 [09:36<51:29,  9.17s/it]mesh055 mesh055 0.0
+mesh055 mesh055 0.0
+geo error: 0.0000:  16%|█▌        | 63/400 [09:46<51:29,  9.17s/it]current mean geo error: 0.0198
+geo error: 0.0000:  16%|█▌        | 64/400 [09:46<51:13,  9.15s/it]mesh055 mesh056 0.02145095
+mesh055 mesh056 0.02145095
+geo error: 0.0215:  16%|█▌        | 64/400 [09:55<51:13,  9.15s/it]current mean geo error: 0.0198
+geo error: 0.0215:  16%|█▋        | 65/400 [09:55<51:19,  9.19s/it]mesh055 mesh057 0.02361886
+mesh055 mesh057 0.02361886
+geo error: 0.0236:  16%|█▋        | 65/400 [10:04<51:19,  9.19s/it]current mean geo error: 0.0199
+geo error: 0.0236:  16%|█▋        | 66/400 [10:04<51:02,  9.17s/it]mesh055 mesh058 0.020297803
+mesh055 mesh058 0.020297803
+geo error: 0.0203:  16%|█▋        | 66/400 [10:13<51:02,  9.17s/it]current mean geo error: 0.0199
+geo error: 0.0203:  17%|█▋        | 67/400 [10:13<50:45,  9.15s/it]mesh055 mesh059 0.023696268
+mesh055 mesh059 0.023696268
+geo error: 0.0237:  17%|█▋        | 67/400 [10:22<50:45,  9.15s/it]current mean geo error: 0.0199
+geo error: 0.0237:  17%|█▋        | 68/400 [10:22<50:32,  9.13s/it]mesh055 mesh060 0.02436893
+mesh055 mesh060 0.02436893
+geo error: 0.0244:  17%|█▋        | 68/400 [10:31<50:32,  9.13s/it]current mean geo error: 0.0200
+geo error: 0.0244:  17%|█▋        | 69/400 [10:31<50:20,  9.12s/it]mesh055 mesh061 0.0222126
+mesh055 mesh061 0.0222126
+geo error: 0.0222:  17%|█▋        | 69/400 [10:40<50:20,  9.12s/it]current mean geo error: 0.0200
+geo error: 0.0222:  18%|█▊        | 70/400 [10:40<50:07,  9.11s/it]mesh055 mesh062 0.024638407
+mesh055 mesh062 0.024638407
+geo error: 0.0246:  18%|█▊        | 70/400 [10:49<50:07,  9.11s/it]current mean geo error: 0.0201
+geo error: 0.0246:  18%|█▊        | 71/400 [10:49<49:56,  9.11s/it]mesh055 mesh063 0.020830235
+mesh055 mesh063 0.020830235
+geo error: 0.0208:  18%|█▊        | 71/400 [10:59<49:56,  9.11s/it]current mean geo error: 0.0201
+geo error: 0.0208:  18%|█▊        | 72/400 [10:59<50:01,  9.15s/it]mesh055 mesh064 0.019570464
+mesh055 mesh064 0.019570464
+geo error: 0.0196:  18%|█▊        | 72/400 [11:08<50:01,  9.15s/it]current mean geo error: 0.0201
+geo error: 0.0196:  18%|█▊        | 73/400 [11:08<50:03,  9.19s/it]mesh055 mesh065 0.02073941
+mesh055 mesh065 0.02073941
+geo error: 0.0207:  18%|█▊        | 73/400 [11:17<50:03,  9.19s/it]current mean geo error: 0.0201
+geo error: 0.0207:  18%|█▊        | 74/400 [11:17<49:57,  9.19s/it]mesh055 mesh066 0.026806137
+mesh055 mesh066 0.026806137
+geo error: 0.0268:  18%|█▊        | 74/400 [11:27<49:57,  9.19s/it]current mean geo error: 0.0202
+geo error: 0.0268:  19%|█▉        | 75/400 [11:27<50:05,  9.25s/it]mesh055 mesh067 0.019578613
+mesh055 mesh067 0.019578613
+geo error: 0.0196:  19%|█▉        | 75/400 [11:36<50:05,  9.25s/it]current mean geo error: 0.0202
+geo error: 0.0196:  19%|█▉        | 76/400 [11:36<50:11,  9.30s/it]mesh055 mesh068 0.021148786
+mesh055 mesh068 0.021148786
+geo error: 0.0211:  19%|█▉        | 76/400 [11:45<50:11,  9.30s/it]current mean geo error: 0.0202
+geo error: 0.0211:  19%|█▉        | 77/400 [11:45<50:13,  9.33s/it]mesh055 mesh069 0.024553552
+mesh055 mesh069 0.024553552
+geo error: 0.0246:  19%|█▉        | 77/400 [11:55<50:13,  9.33s/it]current mean geo error: 0.0203
+geo error: 0.0246:  20%|█▉        | 78/400 [11:55<49:54,  9.30s/it]mesh055 mesh070 0.025684595
+mesh055 mesh070 0.025684595
+geo error: 0.0257:  20%|█▉        | 78/400 [12:04<49:54,  9.30s/it]current mean geo error: 0.0203
+geo error: 0.0257:  20%|█▉        | 79/400 [12:04<49:41,  9.29s/it]mesh055 mesh071 0.028505474
+mesh055 mesh071 0.028505474
+geo error: 0.0285:  20%|█▉        | 79/400 [12:13<49:41,  9.29s/it]current mean geo error: 0.0204
+geo error: 0.0285:  20%|██        | 80/400 [12:13<49:35,  9.30s/it]mesh056 mesh052 0.020146258
+mesh056 mesh052 0.020146258
+geo error: 0.0201:  20%|██        | 80/400 [12:22<49:35,  9.30s/it]current mean geo error: 0.0204
+geo error: 0.0201:  20%|██        | 81/400 [12:22<49:07,  9.24s/it]mesh056 mesh053 0.021235926
+mesh056 mesh053 0.021235926
+geo error: 0.0212:  20%|██        | 81/400 [12:31<49:07,  9.24s/it]current mean geo error: 0.0204
+geo error: 0.0212:  20%|██        | 82/400 [12:31<48:44,  9.20s/it]mesh056 mesh054 0.022605326
+mesh056 mesh054 0.022605326
+geo error: 0.0226:  20%|██        | 82/400 [12:40<48:44,  9.20s/it]current mean geo error: 0.0205
+geo error: 0.0226:  21%|██        | 83/400 [12:40<48:24,  9.16s/it]mesh056 mesh055 0.020968994
+mesh056 mesh055 0.020968994
+geo error: 0.0210:  21%|██        | 83/400 [12:50<48:24,  9.16s/it]current mean geo error: 0.0205
+geo error: 0.0210:  21%|██        | 84/400 [12:50<48:11,  9.15s/it]mesh056 mesh056 0.0
+mesh056 mesh056 0.0
+geo error: 0.0000:  21%|██        | 84/400 [12:59<48:11,  9.15s/it]current mean geo error: 0.0202
+geo error: 0.0000:  21%|██▏       | 85/400 [12:59<48:05,  9.16s/it]mesh056 mesh057 0.019541413
+mesh056 mesh057 0.019541413
+geo error: 0.0195:  21%|██▏       | 85/400 [13:08<48:05,  9.16s/it]current mean geo error: 0.0202
+geo error: 0.0195:  22%|██▏       | 86/400 [13:08<47:48,  9.14s/it]mesh056 mesh058 0.017188521
+mesh056 mesh058 0.017188521
+geo error: 0.0172:  22%|██▏       | 86/400 [13:17<47:48,  9.14s/it]current mean geo error: 0.0202
+geo error: 0.0172:  22%|██▏       | 87/400 [13:17<47:30,  9.11s/it]mesh056 mesh059 0.016660647
+mesh056 mesh059 0.016660647
+geo error: 0.0167:  22%|██▏       | 87/400 [13:26<47:30,  9.11s/it]current mean geo error: 0.0202
+geo error: 0.0167:  22%|██▏       | 88/400 [13:26<47:16,  9.09s/it]mesh056 mesh060 0.020103844
+mesh056 mesh060 0.020103844
+geo error: 0.0201:  22%|██▏       | 88/400 [13:35<47:16,  9.09s/it]current mean geo error: 0.0202
+geo error: 0.0201:  22%|██▏       | 89/400 [13:35<47:08,  9.10s/it]mesh056 mesh061 0.01868919
+mesh056 mesh061 0.01868919
+geo error: 0.0187:  22%|██▏       | 89/400 [13:44<47:08,  9.10s/it]current mean geo error: 0.0201
+geo error: 0.0187:  22%|██▎       | 90/400 [13:44<47:00,  9.10s/it]mesh056 mesh062 0.017952602
+mesh056 mesh062 0.017952602
+geo error: 0.0180:  22%|██▎       | 90/400 [13:53<47:00,  9.10s/it]current mean geo error: 0.0201
+geo error: 0.0180:  23%|██▎       | 91/400 [13:53<46:51,  9.10s/it]mesh056 mesh063 0.016533094
+mesh056 mesh063 0.016533094
+geo error: 0.0165:  23%|██▎       | 91/400 [14:02<46:51,  9.10s/it]current mean geo error: 0.0201
+geo error: 0.0165:  23%|██▎       | 92/400 [14:02<46:53,  9.13s/it]mesh056 mesh064 0.014656332
+mesh056 mesh064 0.014656332
+geo error: 0.0147:  23%|██▎       | 92/400 [14:12<46:53,  9.13s/it]current mean geo error: 0.0200
+geo error: 0.0147:  23%|██▎       | 93/400 [14:12<47:09,  9.22s/it]mesh056 mesh065 0.016754517
+mesh056 mesh065 0.016754517
+geo error: 0.0168:  23%|██▎       | 93/400 [14:21<47:09,  9.22s/it]current mean geo error: 0.0200
+geo error: 0.0168:  24%|██▎       | 94/400 [14:21<47:27,  9.30s/it]mesh056 mesh066 0.02314645
+mesh056 mesh066 0.02314645
+geo error: 0.0231:  24%|██▎       | 94/400 [14:30<47:27,  9.30s/it]current mean geo error: 0.0200
+geo error: 0.0231:  24%|██▍       | 95/400 [14:30<46:56,  9.23s/it]mesh056 mesh067 0.017054942
+mesh056 mesh067 0.017054942
+geo error: 0.0171:  24%|██▍       | 95/400 [14:39<46:56,  9.23s/it]current mean geo error: 0.0200
+geo error: 0.0171:  24%|██▍       | 96/400 [14:39<46:26,  9.17s/it]mesh056 mesh068 0.014072194
+mesh056 mesh068 0.014072194
+geo error: 0.0141:  24%|██▍       | 96/400 [14:48<46:26,  9.17s/it]current mean geo error: 0.0199
+geo error: 0.0141:  24%|██▍       | 97/400 [14:48<46:03,  9.12s/it]mesh056 mesh069 0.019593325
+mesh056 mesh069 0.019593325
+geo error: 0.0196:  24%|██▍       | 97/400 [14:58<46:03,  9.12s/it]current mean geo error: 0.0199
+geo error: 0.0196:  24%|██▍       | 98/400 [14:58<45:50,  9.11s/it]mesh056 mesh070 0.01992949
+mesh056 mesh070 0.01992949
+geo error: 0.0199:  24%|██▍       | 98/400 [15:07<45:50,  9.11s/it]current mean geo error: 0.0199
+geo error: 0.0199:  25%|██▍       | 99/400 [15:07<45:40,  9.11s/it]mesh056 mesh071 0.030461816
+mesh056 mesh071 0.030461816
+geo error: 0.0305:  25%|██▍       | 99/400 [15:16<45:40,  9.11s/it]current mean geo error: 0.0200
+geo error: 0.0305:  25%|██▌       | 100/400 [15:16<45:31,  9.11s/it]mesh057 mesh052 0.022340307
+mesh057 mesh052 0.022340307
+geo error: 0.0223:  25%|██▌       | 100/400 [15:25<45:31,  9.11s/it]current mean geo error: 0.0200
+geo error: 0.0223:  25%|██▌       | 101/400 [15:25<45:21,  9.10s/it]mesh057 mesh053 0.022567429
+mesh057 mesh053 0.022567429
+geo error: 0.0226:  25%|██▌       | 101/400 [15:34<45:21,  9.10s/it]current mean geo error: 0.0201
+geo error: 0.0226:  26%|██▌       | 102/400 [15:34<45:12,  9.10s/it]mesh057 mesh054 0.026258923
+mesh057 mesh054 0.026258923
+geo error: 0.0263:  26%|██▌       | 102/400 [15:43<45:12,  9.10s/it]current mean geo error: 0.0201
+geo error: 0.0263:  26%|██▌       | 103/400 [15:43<45:04,  9.11s/it]mesh057 mesh055 0.02300053
+mesh057 mesh055 0.02300053
+geo error: 0.0230:  26%|██▌       | 103/400 [15:52<45:04,  9.11s/it]current mean geo error: 0.0202
+geo error: 0.0230:  26%|██▌       | 104/400 [15:52<45:04,  9.14s/it]mesh057 mesh056 0.01934206
+mesh057 mesh056 0.01934206
+geo error: 0.0193:  26%|██▌       | 104/400 [16:02<45:04,  9.14s/it]current mean geo error: 0.0201
+geo error: 0.0193:  26%|██▋       | 105/400 [16:02<45:08,  9.18s/it]mesh057 mesh057 0.0
+mesh057 mesh057 0.0
+geo error: 0.0000:  26%|██▋       | 105/400 [16:11<45:08,  9.18s/it]current mean geo error: 0.0200
+geo error: 0.0000:  26%|██▋       | 106/400 [16:11<45:02,  9.19s/it]mesh057 mesh058 0.01580574
+mesh057 mesh058 0.01580574
+geo error: 0.0158:  26%|██▋       | 106/400 [16:20<45:02,  9.19s/it]current mean geo error: 0.0199
+geo error: 0.0158:  27%|██▋       | 107/400 [16:20<44:46,  9.17s/it]mesh057 mesh059 0.020148505
+mesh057 mesh059 0.020148505
+geo error: 0.0201:  27%|██▋       | 107/400 [16:29<44:46,  9.17s/it]current mean geo error: 0.0199
+geo error: 0.0201:  27%|██▋       | 108/400 [16:29<45:04,  9.26s/it]mesh057 mesh060 0.01740182
+mesh057 mesh060 0.01740182
+geo error: 0.0174:  27%|██▋       | 108/400 [16:39<45:04,  9.26s/it]current mean geo error: 0.0199
+geo error: 0.0174:  27%|██▋       | 109/400 [16:39<44:55,  9.26s/it]mesh057 mesh061 0.020101639
+mesh057 mesh061 0.020101639
+geo error: 0.0201:  27%|██▋       | 109/400 [16:48<44:55,  9.26s/it]current mean geo error: 0.0199
+geo error: 0.0201:  28%|██▊       | 110/400 [16:48<44:40,  9.24s/it]mesh057 mesh062 0.018690731
+mesh057 mesh062 0.018690731
+geo error: 0.0187:  28%|██▊       | 110/400 [16:57<44:40,  9.24s/it]current mean geo error: 0.0199
+geo error: 0.0187:  28%|██▊       | 111/400 [16:57<44:29,  9.24s/it]mesh057 mesh063 0.014441475
+mesh057 mesh063 0.014441475
+geo error: 0.0144:  28%|██▊       | 111/400 [17:06<44:29,  9.24s/it]current mean geo error: 0.0198
+geo error: 0.0144:  28%|██▊       | 112/400 [17:06<44:25,  9.25s/it]mesh057 mesh064 0.01784606
+mesh057 mesh064 0.01784606
+geo error: 0.0178:  28%|██▊       | 112/400 [17:16<44:25,  9.25s/it]current mean geo error: 0.0198
+geo error: 0.0178:  28%|██▊       | 113/400 [17:16<44:20,  9.27s/it]mesh057 mesh065 0.019606102
+mesh057 mesh065 0.019606102
+geo error: 0.0196:  28%|██▊       | 113/400 [17:25<44:20,  9.27s/it]current mean geo error: 0.0198
+geo error: 0.0196:  28%|██▊       | 114/400 [17:25<44:03,  9.24s/it]mesh057 mesh066 0.021396853
+mesh057 mesh066 0.021396853
+geo error: 0.0214:  28%|██▊       | 114/400 [17:34<44:03,  9.24s/it]current mean geo error: 0.0198
+geo error: 0.0214:  29%|██▉       | 115/400 [17:34<43:50,  9.23s/it]mesh057 mesh067 0.017535856
+mesh057 mesh067 0.017535856
+geo error: 0.0175:  29%|██▉       | 115/400 [17:43<43:50,  9.23s/it]current mean geo error: 0.0198
+geo error: 0.0175:  29%|██▉       | 116/400 [17:43<43:38,  9.22s/it]mesh057 mesh068 0.016537653
+mesh057 mesh068 0.016537653
+geo error: 0.0165:  29%|██▉       | 116/400 [17:52<43:38,  9.22s/it]current mean geo error: 0.0198
+geo error: 0.0165:  29%|██▉       | 117/400 [17:52<43:21,  9.19s/it]mesh057 mesh069 0.019865334
+mesh057 mesh069 0.019865334
+geo error: 0.0199:  29%|██▉       | 117/400 [18:02<43:21,  9.19s/it]current mean geo error: 0.0198
+geo error: 0.0199:  30%|██▉       | 118/400 [18:02<43:14,  9.20s/it]mesh057 mesh070 0.021791875
+mesh057 mesh070 0.021791875
+geo error: 0.0218:  30%|██▉       | 118/400 [18:11<43:14,  9.20s/it]current mean geo error: 0.0198
+geo error: 0.0218:  30%|██▉       | 119/400 [18:11<43:03,  9.19s/it]mesh057 mesh071 0.03128893
+mesh057 mesh071 0.03128893
+geo error: 0.0313:  30%|██▉       | 119/400 [18:20<43:03,  9.19s/it]current mean geo error: 0.0199
+geo error: 0.0313:  30%|███       | 120/400 [18:20<42:56,  9.20s/it]mesh058 mesh052 0.023110108
+mesh058 mesh052 0.023110108
+geo error: 0.0231:  30%|███       | 120/400 [18:29<42:56,  9.20s/it]current mean geo error: 0.0199
+geo error: 0.0231:  30%|███       | 121/400 [18:29<42:45,  9.20s/it]mesh058 mesh053 0.020913037
+mesh058 mesh053 0.020913037
+geo error: 0.0209:  30%|███       | 121/400 [18:39<42:45,  9.20s/it]current mean geo error: 0.0199
+geo error: 0.0209:  30%|███       | 122/400 [18:39<43:00,  9.28s/it]mesh058 mesh054 0.02568323
+mesh058 mesh054 0.02568323
+geo error: 0.0257:  30%|███       | 122/400 [18:48<43:00,  9.28s/it]current mean geo error: 0.0200
+geo error: 0.0257:  31%|███       | 123/400 [18:48<42:47,  9.27s/it]mesh058 mesh055 0.020070395
+mesh058 mesh055 0.020070395
+geo error: 0.0201:  31%|███       | 123/400 [18:57<42:47,  9.27s/it]current mean geo error: 0.0200
+geo error: 0.0201:  31%|███       | 124/400 [18:57<42:37,  9.27s/it]mesh058 mesh056 0.01716945
+mesh058 mesh056 0.01716945
+geo error: 0.0172:  31%|███       | 124/400 [19:06<42:37,  9.27s/it]current mean geo error: 0.0200
+geo error: 0.0172:  31%|███▏      | 125/400 [19:06<42:30,  9.28s/it]mesh058 mesh057 0.015732102
+mesh058 mesh057 0.015732102
+geo error: 0.0157:  31%|███▏      | 125/400 [19:16<42:30,  9.28s/it]current mean geo error: 0.0199
+geo error: 0.0157:  32%|███▏      | 126/400 [19:16<42:23,  9.28s/it]mesh058 mesh058 0.0
+mesh058 mesh058 0.0
+geo error: 0.0000:  32%|███▏      | 126/400 [19:25<42:23,  9.28s/it]current mean geo error: 0.0198
+geo error: 0.0000:  32%|███▏      | 127/400 [19:25<42:16,  9.29s/it]mesh058 mesh059 0.018119674
+mesh058 mesh059 0.018119674
+geo error: 0.0181:  32%|███▏      | 127/400 [19:34<42:16,  9.29s/it]current mean geo error: 0.0198
+geo error: 0.0181:  32%|███▏      | 128/400 [19:34<42:07,  9.29s/it]mesh058 mesh060 0.017871717
+mesh058 mesh060 0.017871717
+geo error: 0.0179:  32%|███▏      | 128/400 [19:44<42:07,  9.29s/it]current mean geo error: 0.0197
+geo error: 0.0179:  32%|███▏      | 129/400 [19:44<41:59,  9.30s/it]mesh058 mesh061 0.019865396
+mesh058 mesh061 0.019865396
+geo error: 0.0199:  32%|███▏      | 129/400 [19:53<41:59,  9.30s/it]current mean geo error: 0.0197
+geo error: 0.0199:  32%|███▎      | 130/400 [19:53<41:50,  9.30s/it]mesh058 mesh062 0.015374344
+mesh058 mesh062 0.015374344
+geo error: 0.0154:  32%|███▎      | 130/400 [20:02<41:50,  9.30s/it]current mean geo error: 0.0197
+geo error: 0.0154:  33%|███▎      | 131/400 [20:02<41:41,  9.30s/it]mesh058 mesh063 0.016600141
+mesh058 mesh063 0.016600141
+geo error: 0.0166:  33%|███▎      | 131/400 [20:12<41:41,  9.30s/it]current mean geo error: 0.0197
+geo error: 0.0166:  33%|███▎      | 132/400 [20:12<41:32,  9.30s/it]mesh058 mesh064 0.015858272
+mesh058 mesh064 0.015858272
+geo error: 0.0159:  33%|███▎      | 132/400 [20:21<41:32,  9.30s/it]current mean geo error: 0.0197
+geo error: 0.0159:  33%|███▎      | 133/400 [20:21<41:14,  9.27s/it]mesh058 mesh065 0.012262765
+mesh058 mesh065 0.012262765
+geo error: 0.0123:  33%|███▎      | 133/400 [20:30<41:14,  9.27s/it]current mean geo error: 0.0196
+geo error: 0.0123:  34%|███▎      | 134/400 [20:30<41:00,  9.25s/it]mesh058 mesh066 0.019297527
+mesh058 mesh066 0.019297527
+geo error: 0.0193:  34%|███▎      | 134/400 [20:39<41:00,  9.25s/it]current mean geo error: 0.0196
+geo error: 0.0193:  34%|███▍      | 135/400 [20:39<40:46,  9.23s/it]mesh058 mesh067 0.01360609
+mesh058 mesh067 0.01360609
+geo error: 0.0136:  34%|███▍      | 135/400 [20:49<40:46,  9.23s/it]current mean geo error: 0.0196
+geo error: 0.0136:  34%|███▍      | 136/400 [20:49<41:01,  9.32s/it]mesh058 mesh068 0.016467132
+mesh058 mesh068 0.016467132
+geo error: 0.0165:  34%|███▍      | 136/400 [20:58<41:01,  9.32s/it]current mean geo error: 0.0195
+geo error: 0.0165:  34%|███▍      | 137/400 [20:58<40:55,  9.34s/it]mesh058 mesh069 0.018589605
+mesh058 mesh069 0.018589605
+geo error: 0.0186:  34%|███▍      | 137/400 [21:07<40:55,  9.34s/it]current mean geo error: 0.0195
+geo error: 0.0186:  34%|███▍      | 138/400 [21:07<40:46,  9.34s/it]mesh058 mesh070 0.021527523
+mesh058 mesh070 0.021527523
+geo error: 0.0215:  34%|███▍      | 138/400 [21:17<40:46,  9.34s/it]current mean geo error: 0.0195
+geo error: 0.0215:  35%|███▍      | 139/400 [21:17<40:30,  9.31s/it]mesh058 mesh071 0.037179723
+mesh058 mesh071 0.037179723
+geo error: 0.0372:  35%|███▍      | 139/400 [21:26<40:30,  9.31s/it]current mean geo error: 0.0197
+geo error: 0.0372:  35%|███▌      | 140/400 [21:26<40:21,  9.31s/it]mesh059 mesh052 0.020012844
+mesh059 mesh052 0.020012844
+geo error: 0.0200:  35%|███▌      | 140/400 [21:35<40:21,  9.31s/it]current mean geo error: 0.0197
+geo error: 0.0200:  35%|███▌      | 141/400 [21:35<40:02,  9.28s/it]mesh059 mesh053 0.02006396
+mesh059 mesh053 0.02006396
+geo error: 0.0201:  35%|███▌      | 141/400 [21:44<40:02,  9.28s/it]current mean geo error: 0.0197
+geo error: 0.0201:  36%|███▌      | 142/400 [21:44<39:48,  9.26s/it]mesh059 mesh054 0.02379588
+mesh059 mesh054 0.02379588
+geo error: 0.0238:  36%|███▌      | 142/400 [21:53<39:48,  9.26s/it]current mean geo error: 0.0197
+geo error: 0.0238:  36%|███▌      | 143/400 [21:53<39:28,  9.22s/it]mesh059 mesh055 0.023745468
+mesh059 mesh055 0.023745468
+geo error: 0.0237:  36%|███▌      | 143/400 [22:03<39:28,  9.22s/it]current mean geo error: 0.0197
+geo error: 0.0237:  36%|███▌      | 144/400 [22:03<39:19,  9.22s/it]mesh059 mesh056 0.016540952
+mesh059 mesh056 0.016540952
+geo error: 0.0165:  36%|███▌      | 144/400 [22:12<39:19,  9.22s/it]current mean geo error: 0.0197
+geo error: 0.0165:  36%|███▋      | 145/400 [22:12<39:04,  9.20s/it]mesh059 mesh057 0.019498715
+mesh059 mesh057 0.019498715
+geo error: 0.0195:  36%|███▋      | 145/400 [22:21<39:04,  9.20s/it]current mean geo error: 0.0197
+geo error: 0.0195:  36%|███▋      | 146/400 [22:21<39:00,  9.21s/it]mesh059 mesh058 0.017521853
+mesh059 mesh058 0.017521853
+geo error: 0.0175:  36%|███▋      | 146/400 [22:30<39:00,  9.21s/it]current mean geo error: 0.0197
+geo error: 0.0175:  37%|███▋      | 147/400 [22:30<38:53,  9.22s/it]mesh059 mesh059 0.0
+mesh059 mesh059 0.0
+geo error: 0.0000:  37%|███▋      | 147/400 [22:40<38:53,  9.22s/it]current mean geo error: 0.0196
+geo error: 0.0000:  37%|███▋      | 148/400 [22:40<38:42,  9.22s/it]mesh059 mesh060 0.019736553
+mesh059 mesh060 0.019736553
+geo error: 0.0197:  37%|███▋      | 148/400 [22:49<38:42,  9.22s/it]current mean geo error: 0.0196
+geo error: 0.0197:  37%|███▋      | 149/400 [22:49<38:32,  9.21s/it]mesh059 mesh061 0.017773665
+mesh059 mesh061 0.017773665
+geo error: 0.0178:  37%|███▋      | 149/400 [22:58<38:32,  9.21s/it]current mean geo error: 0.0195
+geo error: 0.0178:  38%|███▊      | 150/400 [22:58<38:43,  9.30s/it]mesh059 mesh062 0.01594337
+mesh059 mesh062 0.01594337
+geo error: 0.0159:  38%|███▊      | 150/400 [23:07<38:43,  9.30s/it]current mean geo error: 0.0195
+geo error: 0.0159:  38%|███▊      | 151/400 [23:07<38:32,  9.29s/it]mesh059 mesh063 0.018276129
+mesh059 mesh063 0.018276129
+geo error: 0.0183:  38%|███▊      | 151/400 [23:17<38:32,  9.29s/it]current mean geo error: 0.0195
+geo error: 0.0183:  38%|███▊      | 152/400 [23:17<38:12,  9.24s/it]mesh059 mesh064 0.016825128
+mesh059 mesh064 0.016825128
+geo error: 0.0168:  38%|███▊      | 152/400 [23:26<38:12,  9.24s/it]current mean geo error: 0.0195
+geo error: 0.0168:  38%|███▊      | 153/400 [23:26<37:58,  9.23s/it]mesh059 mesh065 0.015860613
+mesh059 mesh065 0.015860613
+geo error: 0.0159:  38%|███▊      | 153/400 [23:35<37:58,  9.23s/it]current mean geo error: 0.0195
+geo error: 0.0159:  38%|███▊      | 154/400 [23:35<37:48,  9.22s/it]mesh059 mesh066 0.019707441
+mesh059 mesh066 0.019707441
+geo error: 0.0197:  38%|███▊      | 154/400 [23:44<37:48,  9.22s/it]current mean geo error: 0.0195
+geo error: 0.0197:  39%|███▉      | 155/400 [23:44<37:37,  9.21s/it]mesh059 mesh067 0.017199403
+mesh059 mesh067 0.017199403
+geo error: 0.0172:  39%|███▉      | 155/400 [23:54<37:37,  9.21s/it]current mean geo error: 0.0195
+geo error: 0.0172:  39%|███▉      | 156/400 [23:54<37:41,  9.27s/it]mesh059 mesh068 0.018065173
+mesh059 mesh068 0.018065173
+geo error: 0.0181:  39%|███▉      | 156/400 [24:03<37:41,  9.27s/it]current mean geo error: 0.0195
+geo error: 0.0181:  39%|███▉      | 157/400 [24:03<37:28,  9.25s/it]mesh059 mesh069 0.021571105
+mesh059 mesh069 0.021571105
+geo error: 0.0216:  39%|███▉      | 157/400 [24:12<37:28,  9.25s/it]current mean geo error: 0.0195
+geo error: 0.0216:  40%|███▉      | 158/400 [24:12<37:22,  9.26s/it]mesh059 mesh070 0.022711935
+mesh059 mesh070 0.022711935
+geo error: 0.0227:  40%|███▉      | 158/400 [24:21<37:22,  9.26s/it]current mean geo error: 0.0195
+geo error: 0.0227:  40%|███▉      | 159/400 [24:21<37:07,  9.24s/it]mesh059 mesh071 0.032782342
+mesh059 mesh071 0.032782342
+geo error: 0.0328:  40%|███▉      | 159/400 [24:31<37:07,  9.24s/it]current mean geo error: 0.0196
+geo error: 0.0328:  40%|████      | 160/400 [24:31<36:57,  9.24s/it]mesh060 mesh052 0.018258074
+mesh060 mesh052 0.018258074
+geo error: 0.0183:  40%|████      | 160/400 [24:40<36:57,  9.24s/it]current mean geo error: 0.0196
+geo error: 0.0183:  40%|████      | 161/400 [24:40<36:59,  9.28s/it]mesh060 mesh053 0.016333153
+mesh060 mesh053 0.016333153
+geo error: 0.0163:  40%|████      | 161/400 [24:49<36:59,  9.28s/it]current mean geo error: 0.0195
+geo error: 0.0163:  40%|████      | 162/400 [24:49<36:42,  9.25s/it]mesh060 mesh054 0.022943709
+mesh060 mesh054 0.022943709
+geo error: 0.0229:  40%|████      | 162/400 [24:58<36:42,  9.25s/it]current mean geo error: 0.0196
+geo error: 0.0229:  41%|████      | 163/400 [24:58<36:30,  9.24s/it]mesh060 mesh055 0.02463649
+mesh060 mesh055 0.02463649
+geo error: 0.0246:  41%|████      | 163/400 [25:08<36:30,  9.24s/it]current mean geo error: 0.0196
+geo error: 0.0246:  41%|████      | 164/400 [25:08<36:44,  9.34s/it]mesh060 mesh056 0.01992241
+mesh060 mesh056 0.01992241
+geo error: 0.0199:  41%|████      | 164/400 [25:17<36:44,  9.34s/it]current mean geo error: 0.0196
+geo error: 0.0199:  41%|████▏     | 165/400 [25:17<36:32,  9.33s/it]mesh060 mesh057 0.017770765
+mesh060 mesh057 0.017770765
+geo error: 0.0178:  41%|████▏     | 165/400 [25:27<36:32,  9.33s/it]current mean geo error: 0.0196
+geo error: 0.0178:  42%|████▏     | 166/400 [25:27<36:23,  9.33s/it]mesh060 mesh058 0.01796091
+mesh060 mesh058 0.01796091
+geo error: 0.0180:  42%|████▏     | 166/400 [25:36<36:23,  9.33s/it]current mean geo error: 0.0196
+geo error: 0.0180:  42%|████▏     | 167/400 [25:36<36:12,  9.32s/it]mesh060 mesh059 0.02029719
+mesh060 mesh059 0.02029719
+geo error: 0.0203:  42%|████▏     | 167/400 [25:45<36:12,  9.32s/it]current mean geo error: 0.0196
+geo error: 0.0203:  42%|████▏     | 168/400 [25:45<36:00,  9.31s/it]mesh060 mesh060 0.0
+mesh060 mesh060 0.0
+geo error: 0.0000:  42%|████▏     | 168/400 [25:54<36:00,  9.31s/it]current mean geo error: 0.0195
+geo error: 0.0000:  42%|████▏     | 169/400 [25:54<35:50,  9.31s/it]mesh060 mesh061 0.022291766
+mesh060 mesh061 0.022291766
+geo error: 0.0223:  42%|████▏     | 169/400 [26:04<35:50,  9.31s/it]current mean geo error: 0.0195
+geo error: 0.0223:  42%|████▎     | 170/400 [26:04<35:32,  9.27s/it]mesh060 mesh062 0.020916801
+mesh060 mesh062 0.020916801
+geo error: 0.0209:  42%|████▎     | 170/400 [26:13<35:32,  9.27s/it]current mean geo error: 0.0195
+geo error: 0.0209:  43%|████▎     | 171/400 [26:13<35:17,  9.25s/it]mesh060 mesh063 0.02006202
+mesh060 mesh063 0.02006202
+geo error: 0.0201:  43%|████▎     | 171/400 [26:22<35:17,  9.25s/it]current mean geo error: 0.0195
+geo error: 0.0201:  43%|████▎     | 172/400 [26:22<35:12,  9.26s/it]mesh060 mesh064 0.020197848
+mesh060 mesh064 0.020197848
+geo error: 0.0202:  43%|████▎     | 172/400 [26:31<35:12,  9.26s/it]current mean geo error: 0.0195
+geo error: 0.0202:  43%|████▎     | 173/400 [26:31<34:58,  9.24s/it]mesh060 mesh065 0.019346891
+mesh060 mesh065 0.019346891
+geo error: 0.0193:  43%|████▎     | 173/400 [26:41<34:58,  9.24s/it]current mean geo error: 0.0195
+geo error: 0.0193:  44%|████▎     | 174/400 [26:41<34:46,  9.23s/it]mesh060 mesh066 0.01789319
+mesh060 mesh066 0.01789319
+geo error: 0.0179:  44%|████▎     | 174/400 [26:50<34:46,  9.23s/it]current mean geo error: 0.0195
+geo error: 0.0179:  44%|████▍     | 175/400 [26:50<34:34,  9.22s/it]mesh060 mesh067 0.019614603
+mesh060 mesh067 0.019614603
+geo error: 0.0196:  44%|████▍     | 175/400 [26:59<34:34,  9.22s/it]current mean geo error: 0.0195
+geo error: 0.0196:  44%|████▍     | 176/400 [26:59<34:27,  9.23s/it]mesh060 mesh068 0.019378083
+mesh060 mesh068 0.019378083
+geo error: 0.0194:  44%|████▍     | 176/400 [27:08<34:27,  9.23s/it]current mean geo error: 0.0195
+geo error: 0.0194:  44%|████▍     | 177/400 [27:08<34:26,  9.27s/it]mesh060 mesh069 0.020538157
+mesh060 mesh069 0.020538157
+geo error: 0.0205:  44%|████▍     | 177/400 [27:18<34:26,  9.27s/it]current mean geo error: 0.0195
+geo error: 0.0205:  44%|████▍     | 178/400 [27:18<34:25,  9.31s/it]mesh060 mesh070 0.017662048
+mesh060 mesh070 0.017662048
+geo error: 0.0177:  44%|████▍     | 178/400 [27:27<34:25,  9.31s/it]current mean geo error: 0.0195
+geo error: 0.0177:  45%|████▍     | 179/400 [27:27<34:15,  9.30s/it]mesh060 mesh071 0.033174127
+mesh060 mesh071 0.033174127
+geo error: 0.0332:  45%|████▍     | 179/400 [27:36<34:15,  9.30s/it]current mean geo error: 0.0196
+geo error: 0.0332:  45%|████▌     | 180/400 [27:36<33:59,  9.27s/it]mesh061 mesh052 0.015871126
+mesh061 mesh052 0.015871126
+geo error: 0.0159:  45%|████▌     | 180/400 [27:45<33:59,  9.27s/it]current mean geo error: 0.0195
+geo error: 0.0159:  45%|████▌     | 181/400 [27:45<33:46,  9.25s/it]mesh061 mesh053 0.01609691
+mesh061 mesh053 0.01609691
+geo error: 0.0161:  45%|████▌     | 181/400 [27:55<33:46,  9.25s/it]current mean geo error: 0.0195
+geo error: 0.0161:  46%|████▌     | 182/400 [27:55<33:33,  9.23s/it]mesh061 mesh054 0.018251885
+mesh061 mesh054 0.018251885
+geo error: 0.0183:  46%|████▌     | 182/400 [28:04<33:33,  9.23s/it]current mean geo error: 0.0195
+geo error: 0.0183:  46%|████▌     | 183/400 [28:04<33:24,  9.24s/it]mesh061 mesh055 0.022240372
+mesh061 mesh055 0.022240372
+geo error: 0.0222:  46%|████▌     | 183/400 [28:13<33:24,  9.24s/it]current mean geo error: 0.0195
+geo error: 0.0222:  46%|████▌     | 184/400 [28:13<33:24,  9.28s/it]mesh061 mesh056 0.018572263
+mesh061 mesh056 0.018572263
+geo error: 0.0186:  46%|████▌     | 184/400 [28:23<33:24,  9.28s/it]current mean geo error: 0.0195
+geo error: 0.0186:  46%|████▋     | 185/400 [28:23<33:17,  9.29s/it]mesh061 mesh057 0.019255634
+mesh061 mesh057 0.019255634
+geo error: 0.0193:  46%|████▋     | 185/400 [28:32<33:17,  9.29s/it]current mean geo error: 0.0195
+geo error: 0.0193:  46%|████▋     | 186/400 [28:32<33:01,  9.26s/it]mesh061 mesh058 0.01951635
+mesh061 mesh058 0.01951635
+geo error: 0.0195:  46%|████▋     | 186/400 [28:41<33:01,  9.26s/it]current mean geo error: 0.0195
+geo error: 0.0195:  47%|████▋     | 187/400 [28:41<32:47,  9.24s/it]mesh061 mesh059 0.018669875
+mesh061 mesh059 0.018669875
+geo error: 0.0187:  47%|████▋     | 187/400 [28:50<32:47,  9.24s/it]current mean geo error: 0.0195
+geo error: 0.0187:  47%|████▋     | 188/400 [28:50<32:35,  9.22s/it]mesh061 mesh060 0.021208357
+mesh061 mesh060 0.021208357
+geo error: 0.0212:  47%|████▋     | 188/400 [28:59<32:35,  9.22s/it]current mean geo error: 0.0195
+geo error: 0.0212:  47%|████▋     | 189/400 [28:59<32:24,  9.22s/it]mesh061 mesh061 0.0
+mesh061 mesh061 0.0
+geo error: 0.0000:  47%|████▋     | 189/400 [29:09<32:24,  9.22s/it]current mean geo error: 0.0194
+geo error: 0.0000:  48%|████▊     | 190/400 [29:09<32:21,  9.25s/it]mesh061 mesh062 0.019064233
+mesh061 mesh062 0.019064233
+geo error: 0.0191:  48%|████▊     | 190/400 [29:18<32:21,  9.25s/it]current mean geo error: 0.0194
+geo error: 0.0191:  48%|████▊     | 191/400 [29:18<32:17,  9.27s/it]mesh061 mesh063 0.016629672
+mesh061 mesh063 0.016629672
+geo error: 0.0166:  48%|████▊     | 191/400 [29:28<32:17,  9.27s/it]current mean geo error: 0.0194
+geo error: 0.0166:  48%|████▊     | 192/400 [29:28<32:26,  9.36s/it]mesh061 mesh064 0.01533038
+mesh061 mesh064 0.01533038
+geo error: 0.0153:  48%|████▊     | 192/400 [29:37<32:26,  9.36s/it]current mean geo error: 0.0194
+geo error: 0.0153:  48%|████▊     | 193/400 [29:37<32:15,  9.35s/it]mesh061 mesh065 0.020202942
+mesh061 mesh065 0.020202942
+geo error: 0.0202:  48%|████▊     | 193/400 [29:46<32:15,  9.35s/it]current mean geo error: 0.0194
+geo error: 0.0202:  48%|████▊     | 194/400 [29:46<32:07,  9.36s/it]mesh061 mesh066 0.017892059
+mesh061 mesh066 0.017892059
+geo error: 0.0179:  48%|████▊     | 194/400 [29:55<32:07,  9.36s/it]current mean geo error: 0.0194
+geo error: 0.0179:  49%|████▉     | 195/400 [29:55<31:49,  9.31s/it]mesh061 mesh067 0.018647306
+mesh061 mesh067 0.018647306
+geo error: 0.0186:  49%|████▉     | 195/400 [30:05<31:49,  9.31s/it]current mean geo error: 0.0194
+geo error: 0.0186:  49%|████▉     | 196/400 [30:05<31:33,  9.28s/it]mesh061 mesh068 0.016335623
+mesh061 mesh068 0.016335623
+geo error: 0.0163:  49%|████▉     | 196/400 [30:14<31:33,  9.28s/it]current mean geo error: 0.0194
+geo error: 0.0163:  49%|████▉     | 197/400 [30:14<31:24,  9.28s/it]mesh061 mesh069 0.020387052
+mesh061 mesh069 0.020387052
+geo error: 0.0204:  49%|████▉     | 197/400 [30:23<31:24,  9.28s/it]current mean geo error: 0.0194
+geo error: 0.0204:  50%|████▉     | 198/400 [30:23<31:20,  9.31s/it]mesh061 mesh070 0.020511592
+mesh061 mesh070 0.020511592
+geo error: 0.0205:  50%|████▉     | 198/400 [30:33<31:20,  9.31s/it]current mean geo error: 0.0194
+geo error: 0.0205:  50%|████▉     | 199/400 [30:33<31:11,  9.31s/it]mesh061 mesh071 0.02800277
+mesh061 mesh071 0.02800277
+geo error: 0.0280:  50%|████▉     | 199/400 [30:42<31:11,  9.31s/it]current mean geo error: 0.0194
+geo error: 0.0280:  50%|█████     | 200/400 [30:42<30:57,  9.29s/it]mesh062 mesh052 0.020038052
+mesh062 mesh052 0.020038052
+geo error: 0.0200:  50%|█████     | 200/400 [30:51<30:57,  9.29s/it]current mean geo error: 0.0194
+geo error: 0.0200:  50%|█████     | 201/400 [30:51<30:41,  9.25s/it]mesh062 mesh053 0.02005369
+mesh062 mesh053 0.02005369
+geo error: 0.0201:  50%|█████     | 201/400 [31:00<30:41,  9.25s/it]current mean geo error: 0.0194
+geo error: 0.0201:  50%|█████     | 202/400 [31:00<30:41,  9.30s/it]mesh062 mesh054 0.021062551
+mesh062 mesh054 0.021062551
+geo error: 0.0211:  50%|█████     | 202/400 [31:10<30:41,  9.30s/it]current mean geo error: 0.0194
+geo error: 0.0211:  51%|█████     | 203/400 [31:10<30:26,  9.27s/it]mesh062 mesh055 0.024876729
+mesh062 mesh055 0.024876729
+geo error: 0.0249:  51%|█████     | 203/400 [31:19<30:26,  9.27s/it]current mean geo error: 0.0195
+geo error: 0.0249:  51%|█████     | 204/400 [31:19<30:17,  9.27s/it]mesh062 mesh056 0.018132944
+mesh062 mesh056 0.018132944
+geo error: 0.0181:  51%|█████     | 204/400 [31:28<30:17,  9.27s/it]current mean geo error: 0.0194
+geo error: 0.0181:  51%|█████▏    | 205/400 [31:28<30:10,  9.28s/it]mesh062 mesh057 0.018979592
+mesh062 mesh057 0.018979592
+geo error: 0.0190:  51%|█████▏    | 205/400 [31:38<30:10,  9.28s/it]current mean geo error: 0.0194
+geo error: 0.0190:  52%|█████▏    | 206/400 [31:38<30:11,  9.34s/it]mesh062 mesh058 0.01556196
+mesh062 mesh058 0.01556196
+geo error: 0.0156:  52%|█████▏    | 206/400 [31:47<30:11,  9.34s/it]current mean geo error: 0.0194
+geo error: 0.0156:  52%|█████▏    | 207/400 [31:47<30:07,  9.37s/it]mesh062 mesh059 0.016094843
+mesh062 mesh059 0.016094843
+geo error: 0.0161:  52%|█████▏    | 207/400 [31:56<30:07,  9.37s/it]current mean geo error: 0.0194
+geo error: 0.0161:  52%|█████▏    | 208/400 [31:56<29:56,  9.35s/it]mesh062 mesh060 0.020053806
+mesh062 mesh060 0.020053806
+geo error: 0.0201:  52%|█████▏    | 208/400 [32:06<29:56,  9.35s/it]current mean geo error: 0.0194
+geo error: 0.0201:  52%|█████▏    | 209/400 [32:06<29:48,  9.36s/it]mesh062 mesh061 0.019631889
+mesh062 mesh061 0.019631889
+geo error: 0.0196:  52%|█████▏    | 209/400 [32:15<29:48,  9.36s/it]current mean geo error: 0.0194
+geo error: 0.0196:  52%|█████▎    | 210/400 [32:15<29:35,  9.35s/it]mesh062 mesh062 0.0
+mesh062 mesh062 0.0
+geo error: 0.0000:  52%|█████▎    | 210/400 [32:24<29:35,  9.35s/it]current mean geo error: 0.0193
+geo error: 0.0000:  53%|█████▎    | 211/400 [32:24<29:23,  9.33s/it]mesh062 mesh063 0.017918073
+mesh062 mesh063 0.017918073
+geo error: 0.0179:  53%|█████▎    | 211/400 [32:34<29:23,  9.33s/it]current mean geo error: 0.0193
+geo error: 0.0179:  53%|█████▎    | 212/400 [32:34<29:08,  9.30s/it]mesh062 mesh064 0.018906275
+mesh062 mesh064 0.018906275
+geo error: 0.0189:  53%|█████▎    | 212/400 [32:43<29:08,  9.30s/it]current mean geo error: 0.0193
+geo error: 0.0189:  53%|█████▎    | 213/400 [32:43<28:58,  9.30s/it]mesh062 mesh065 0.017522583
+mesh062 mesh065 0.017522583
+geo error: 0.0175:  53%|█████▎    | 213/400 [32:52<28:58,  9.30s/it]current mean geo error: 0.0193
+geo error: 0.0175:  54%|█████▎    | 214/400 [32:52<28:47,  9.29s/it]mesh062 mesh066 0.017298585
+mesh062 mesh066 0.017298585
+geo error: 0.0173:  54%|█████▎    | 214/400 [33:02<28:47,  9.29s/it]current mean geo error: 0.0193
+geo error: 0.0173:  54%|█████▍    | 215/400 [33:02<28:43,  9.32s/it]mesh062 mesh067 0.018424518
+mesh062 mesh067 0.018424518
+geo error: 0.0184:  54%|█████▍    | 215/400 [33:11<28:43,  9.32s/it]current mean geo error: 0.0193
+geo error: 0.0184:  54%|█████▍    | 216/400 [33:11<28:30,  9.30s/it]mesh062 mesh068 0.018390195
+mesh062 mesh068 0.018390195
+geo error: 0.0184:  54%|█████▍    | 216/400 [33:20<28:30,  9.30s/it]current mean geo error: 0.0193
+geo error: 0.0184:  54%|█████▍    | 217/400 [33:20<28:14,  9.26s/it]mesh062 mesh069 0.01965332
+mesh062 mesh069 0.01965332
+geo error: 0.0197:  54%|█████▍    | 217/400 [33:29<28:14,  9.26s/it]current mean geo error: 0.0193
+geo error: 0.0197:  55%|█████▍    | 218/400 [33:29<28:07,  9.27s/it]mesh062 mesh070 0.020375602
+mesh062 mesh070 0.020375602
+geo error: 0.0204:  55%|█████▍    | 218/400 [33:39<28:07,  9.27s/it]current mean geo error: 0.0193
+geo error: 0.0204:  55%|█████▍    | 219/400 [33:39<27:55,  9.26s/it]mesh062 mesh071 0.030918902
+mesh062 mesh071 0.030918902
+geo error: 0.0309:  55%|█████▍    | 219/400 [33:48<27:55,  9.26s/it]current mean geo error: 0.0193
+geo error: 0.0309:  55%|█████▌    | 220/400 [33:48<27:47,  9.26s/it]mesh063 mesh052 0.017988006
+mesh063 mesh052 0.017988006
+geo error: 0.0180:  55%|█████▌    | 220/400 [33:57<27:47,  9.26s/it]current mean geo error: 0.0193
+geo error: 0.0180:  55%|█████▌    | 221/400 [33:57<27:34,  9.24s/it]mesh063 mesh053 0.019278387
+mesh063 mesh053 0.019278387
+geo error: 0.0193:  55%|█████▌    | 221/400 [34:06<27:34,  9.24s/it]current mean geo error: 0.0193
+geo error: 0.0193:  56%|█████▌    | 222/400 [34:06<27:18,  9.20s/it]mesh063 mesh054 0.021272091
+mesh063 mesh054 0.021272091
+geo error: 0.0213:  56%|█████▌    | 222/400 [34:15<27:18,  9.20s/it]current mean geo error: 0.0194
+geo error: 0.0213:  56%|█████▌    | 223/400 [34:15<27:03,  9.17s/it]mesh063 mesh055 0.02083265
+mesh063 mesh055 0.02083265
+geo error: 0.0208:  56%|█████▌    | 223/400 [34:24<27:03,  9.17s/it]current mean geo error: 0.0194
+geo error: 0.0208:  56%|█████▌    | 224/400 [34:24<26:56,  9.18s/it]mesh063 mesh056 0.016406579
+mesh063 mesh056 0.016406579
+geo error: 0.0164:  56%|█████▌    | 224/400 [34:34<26:56,  9.18s/it]current mean geo error: 0.0193
+geo error: 0.0164:  56%|█████▋    | 225/400 [34:34<27:03,  9.28s/it]mesh063 mesh057 0.0139751835
+mesh063 mesh057 0.0139751835
+geo error: 0.0140:  56%|█████▋    | 225/400 [34:43<27:03,  9.28s/it]current mean geo error: 0.0193
+geo error: 0.0140:  56%|█████▋    | 226/400 [34:43<26:50,  9.26s/it]mesh063 mesh058 0.016397735
+mesh063 mesh058 0.016397735
+geo error: 0.0164:  56%|█████▋    | 226/400 [34:53<26:50,  9.26s/it]current mean geo error: 0.0193
+geo error: 0.0164:  57%|█████▋    | 227/400 [34:53<26:47,  9.29s/it]mesh063 mesh059 0.018282365
+mesh063 mesh059 0.018282365
+geo error: 0.0183:  57%|█████▋    | 227/400 [35:02<26:47,  9.29s/it]current mean geo error: 0.0193
+geo error: 0.0183:  57%|█████▋    | 228/400 [35:02<26:38,  9.29s/it]mesh063 mesh060 0.019748861
+mesh063 mesh060 0.019748861
+geo error: 0.0197:  57%|█████▋    | 228/400 [35:11<26:38,  9.29s/it]current mean geo error: 0.0193
+geo error: 0.0197:  57%|█████▋    | 229/400 [35:11<26:26,  9.28s/it]mesh063 mesh061 0.016853169
+mesh063 mesh061 0.016853169
+geo error: 0.0169:  57%|█████▋    | 229/400 [35:20<26:26,  9.28s/it]current mean geo error: 0.0193
+geo error: 0.0169:  57%|█████▊    | 230/400 [35:20<26:16,  9.28s/it]mesh063 mesh062 0.017933829
+mesh063 mesh062 0.017933829
+geo error: 0.0179:  57%|█████▊    | 230/400 [35:30<26:16,  9.28s/it]current mean geo error: 0.0193
+geo error: 0.0179:  58%|█████▊    | 231/400 [35:30<26:05,  9.26s/it]mesh063 mesh063 0.0
+mesh063 mesh063 0.0
+geo error: 0.0000:  58%|█████▊    | 231/400 [35:39<26:05,  9.26s/it]current mean geo error: 0.0192
+geo error: 0.0000:  58%|█████▊    | 232/400 [35:39<25:56,  9.26s/it]mesh063 mesh064 0.013765949
+mesh063 mesh064 0.013765949
+geo error: 0.0138:  58%|█████▊    | 232/400 [35:48<25:56,  9.26s/it]current mean geo error: 0.0192
+geo error: 0.0138:  58%|█████▊    | 233/400 [35:48<25:54,  9.31s/it]mesh063 mesh065 0.019085888
+mesh063 mesh065 0.019085888
+geo error: 0.0191:  58%|█████▊    | 233/400 [35:58<25:54,  9.31s/it]current mean geo error: 0.0192
+geo error: 0.0191:  58%|█████▊    | 234/400 [35:58<25:48,  9.33s/it]mesh063 mesh066 0.021932442
+mesh063 mesh066 0.021932442
+geo error: 0.0219:  58%|█████▊    | 234/400 [36:07<25:48,  9.33s/it]current mean geo error: 0.0192
+geo error: 0.0219:  59%|█████▉    | 235/400 [36:07<25:32,  9.29s/it]mesh063 mesh067 0.013505284
+mesh063 mesh067 0.013505284
+geo error: 0.0135:  59%|█████▉    | 235/400 [36:16<25:32,  9.29s/it]current mean geo error: 0.0192
+geo error: 0.0135:  59%|█████▉    | 236/400 [36:16<25:20,  9.27s/it]mesh063 mesh068 0.014259328
+mesh063 mesh068 0.014259328
+geo error: 0.0143:  59%|█████▉    | 236/400 [36:25<25:20,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0143:  59%|█████▉    | 237/400 [36:25<25:11,  9.27s/it]mesh063 mesh069 0.01664803
+mesh063 mesh069 0.01664803
+geo error: 0.0166:  59%|█████▉    | 237/400 [36:35<25:11,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0166:  60%|█████▉    | 238/400 [36:35<25:02,  9.27s/it]mesh063 mesh070 0.020949755
+mesh063 mesh070 0.020949755
+geo error: 0.0209:  60%|█████▉    | 238/400 [36:44<25:02,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0209:  60%|█████▉    | 239/400 [36:44<25:00,  9.32s/it]mesh063 mesh071 0.028877985
+mesh063 mesh071 0.028877985
+geo error: 0.0289:  60%|█████▉    | 239/400 [36:53<25:00,  9.32s/it]current mean geo error: 0.0192
+geo error: 0.0289:  60%|██████    | 240/400 [36:53<24:46,  9.29s/it]mesh064 mesh052 0.017735805
+mesh064 mesh052 0.017735805
+geo error: 0.0177:  60%|██████    | 240/400 [37:03<24:46,  9.29s/it]current mean geo error: 0.0192
+geo error: 0.0177:  60%|██████    | 241/400 [37:03<24:37,  9.29s/it]mesh064 mesh053 0.019383965
+mesh064 mesh053 0.019383965
+geo error: 0.0194:  60%|██████    | 241/400 [37:12<24:37,  9.29s/it]current mean geo error: 0.0192
+geo error: 0.0194:  60%|██████    | 242/400 [37:12<24:24,  9.27s/it]mesh064 mesh054 0.020805536
+mesh064 mesh054 0.020805536
+geo error: 0.0208:  60%|██████    | 242/400 [37:21<24:24,  9.27s/it]current mean geo error: 0.0192
+geo error: 0.0208:  61%|██████    | 243/400 [37:21<24:10,  9.24s/it]mesh064 mesh055 0.019178504
+mesh064 mesh055 0.019178504
+geo error: 0.0192:  61%|██████    | 243/400 [37:30<24:10,  9.24s/it]current mean geo error: 0.0192
+geo error: 0.0192:  61%|██████    | 244/400 [37:30<23:59,  9.23s/it]mesh064 mesh056 0.014729301
+mesh064 mesh056 0.014729301
+geo error: 0.0147:  61%|██████    | 244/400 [37:39<23:59,  9.23s/it]current mean geo error: 0.0192
+geo error: 0.0147:  61%|██████▏   | 245/400 [37:39<23:53,  9.25s/it]mesh064 mesh057 0.017332172
+mesh064 mesh057 0.017332172
+geo error: 0.0173:  61%|██████▏   | 245/400 [37:49<23:53,  9.25s/it]current mean geo error: 0.0192
+geo error: 0.0173:  62%|██████▏   | 246/400 [37:49<23:46,  9.27s/it]mesh064 mesh058 0.015415509
+mesh064 mesh058 0.015415509
+geo error: 0.0154:  62%|██████▏   | 246/400 [37:58<23:46,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0154:  62%|██████▏   | 247/400 [37:58<23:38,  9.27s/it]mesh064 mesh059 0.017048048
+mesh064 mesh059 0.017048048
+geo error: 0.0170:  62%|██████▏   | 247/400 [38:07<23:38,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0170:  62%|██████▏   | 248/400 [38:07<23:28,  9.26s/it]mesh064 mesh060 0.01919115
+mesh064 mesh060 0.01919115
+geo error: 0.0192:  62%|██████▏   | 248/400 [38:17<23:28,  9.26s/it]current mean geo error: 0.0191
+geo error: 0.0192:  62%|██████▏   | 249/400 [38:17<23:19,  9.27s/it]mesh064 mesh061 0.015807558
+mesh064 mesh061 0.015807558
+geo error: 0.0158:  62%|██████▏   | 249/400 [38:26<23:19,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0158:  62%|██████▎   | 250/400 [38:26<23:16,  9.31s/it]mesh064 mesh062 0.018127548
+mesh064 mesh062 0.018127548
+geo error: 0.0181:  62%|██████▎   | 250/400 [38:35<23:16,  9.31s/it]current mean geo error: 0.0191
+geo error: 0.0181:  63%|██████▎   | 251/400 [38:35<23:06,  9.30s/it]mesh064 mesh063 0.01423116
+mesh064 mesh063 0.01423116
+geo error: 0.0142:  63%|██████▎   | 251/400 [38:45<23:06,  9.30s/it]current mean geo error: 0.0191
+geo error: 0.0142:  63%|██████▎   | 252/400 [38:45<22:56,  9.30s/it]mesh064 mesh064 0.0
+mesh064 mesh064 0.0
+geo error: 0.0000:  63%|██████▎   | 252/400 [38:54<22:56,  9.30s/it]current mean geo error: 0.0190
+geo error: 0.0000:  63%|██████▎   | 253/400 [38:54<22:47,  9.30s/it]mesh064 mesh065 0.015756983
+mesh064 mesh065 0.015756983
+geo error: 0.0158:  63%|██████▎   | 253/400 [39:03<22:47,  9.30s/it]current mean geo error: 0.0190
+geo error: 0.0158:  64%|██████▎   | 254/400 [39:03<22:34,  9.27s/it]mesh064 mesh066 0.023302468
+mesh064 mesh066 0.023302468
+geo error: 0.0233:  64%|██████▎   | 254/400 [39:12<22:34,  9.27s/it]current mean geo error: 0.0190
+geo error: 0.0233:  64%|██████▍   | 255/400 [39:12<22:25,  9.28s/it]mesh064 mesh067 0.01484054
+mesh064 mesh067 0.01484054
+geo error: 0.0148:  64%|██████▍   | 255/400 [39:22<22:25,  9.28s/it]current mean geo error: 0.0190
+geo error: 0.0148:  64%|██████▍   | 256/400 [39:22<22:21,  9.32s/it]mesh064 mesh068 0.014170752
+mesh064 mesh068 0.014170752
+geo error: 0.0142:  64%|██████▍   | 256/400 [39:31<22:21,  9.32s/it]current mean geo error: 0.0190
+geo error: 0.0142:  64%|██████▍   | 257/400 [39:31<22:17,  9.35s/it]mesh064 mesh069 0.018849116
+mesh064 mesh069 0.018849116
+geo error: 0.0188:  64%|██████▍   | 257/400 [39:40<22:17,  9.35s/it]current mean geo error: 0.0190
+geo error: 0.0188:  64%|██████▍   | 258/400 [39:40<22:04,  9.33s/it]mesh064 mesh070 0.020183612
+mesh064 mesh070 0.020183612
+geo error: 0.0202:  64%|██████▍   | 258/400 [39:50<22:04,  9.33s/it]current mean geo error: 0.0190
+geo error: 0.0202:  65%|██████▍   | 259/400 [39:50<21:53,  9.32s/it]mesh064 mesh071 0.028859185
+mesh064 mesh071 0.028859185
+geo error: 0.0289:  65%|██████▍   | 259/400 [39:59<21:53,  9.32s/it]current mean geo error: 0.0190
+geo error: 0.0289:  65%|██████▌   | 260/400 [39:59<21:40,  9.29s/it]mesh065 mesh052 0.023793051
+mesh065 mesh052 0.023793051
+geo error: 0.0238:  65%|██████▌   | 260/400 [40:08<21:40,  9.29s/it]current mean geo error: 0.0191
+geo error: 0.0238:  65%|██████▌   | 261/400 [40:08<21:35,  9.32s/it]mesh065 mesh053 0.021745298
+mesh065 mesh053 0.021745298
+geo error: 0.0217:  65%|██████▌   | 261/400 [40:18<21:35,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0217:  66%|██████▌   | 262/400 [40:18<21:25,  9.32s/it]mesh065 mesh054 0.025361361
+mesh065 mesh054 0.025361361
+geo error: 0.0254:  66%|██████▌   | 262/400 [40:27<21:25,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0254:  66%|██████▌   | 263/400 [40:27<21:18,  9.34s/it]mesh065 mesh055 0.020663856
+mesh065 mesh055 0.020663856
+geo error: 0.0207:  66%|██████▌   | 263/400 [40:36<21:18,  9.34s/it]current mean geo error: 0.0191
+geo error: 0.0207:  66%|██████▌   | 264/400 [40:36<21:07,  9.32s/it]mesh065 mesh056 0.017149184
+mesh065 mesh056 0.017149184
+geo error: 0.0171:  66%|██████▌   | 264/400 [40:46<21:07,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0171:  66%|██████▋   | 265/400 [40:46<20:55,  9.30s/it]mesh065 mesh057 0.019575896
+mesh065 mesh057 0.019575896
+geo error: 0.0196:  66%|██████▋   | 265/400 [40:55<20:55,  9.30s/it]current mean geo error: 0.0191
+geo error: 0.0196:  66%|██████▋   | 266/400 [40:55<20:45,  9.29s/it]mesh065 mesh058 0.01224086
+mesh065 mesh058 0.01224086
+geo error: 0.0122:  66%|██████▋   | 266/400 [41:04<20:45,  9.29s/it]current mean geo error: 0.0191
+geo error: 0.0122:  67%|██████▋   | 267/400 [41:04<20:35,  9.29s/it]mesh065 mesh059 0.01639828
+mesh065 mesh059 0.01639828
+geo error: 0.0164:  67%|██████▋   | 267/400 [41:13<20:35,  9.29s/it]current mean geo error: 0.0191
+geo error: 0.0164:  67%|██████▋   | 268/400 [41:13<20:21,  9.25s/it]mesh065 mesh060 0.018784868
+mesh065 mesh060 0.018784868
+geo error: 0.0188:  67%|██████▋   | 268/400 [41:23<20:21,  9.25s/it]current mean geo error: 0.0191
+geo error: 0.0188:  67%|██████▋   | 269/400 [41:23<20:15,  9.28s/it]mesh065 mesh061 0.019996606
+mesh065 mesh061 0.019996606
+geo error: 0.0200:  67%|██████▋   | 269/400 [41:32<20:15,  9.28s/it]current mean geo error: 0.0191
+geo error: 0.0200:  68%|██████▊   | 270/400 [41:32<20:03,  9.26s/it]mesh065 mesh062 0.018318318
+mesh065 mesh062 0.018318318
+geo error: 0.0183:  68%|██████▊   | 270/400 [41:41<20:03,  9.26s/it]current mean geo error: 0.0191
+geo error: 0.0183:  68%|██████▊   | 271/400 [41:41<19:55,  9.27s/it]mesh065 mesh063 0.018922752
+mesh065 mesh063 0.018922752
+geo error: 0.0189:  68%|██████▊   | 271/400 [41:50<19:55,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0189:  68%|██████▊   | 272/400 [41:50<19:43,  9.25s/it]mesh065 mesh064 0.015812838
+mesh065 mesh064 0.015812838
+geo error: 0.0158:  68%|██████▊   | 272/400 [42:00<19:43,  9.25s/it]current mean geo error: 0.0190
+geo error: 0.0158:  68%|██████▊   | 273/400 [42:00<19:32,  9.24s/it]mesh065 mesh065 0.0
+mesh065 mesh065 0.0
+geo error: 0.0000:  68%|██████▊   | 273/400 [42:09<19:32,  9.24s/it]current mean geo error: 0.0190
+geo error: 0.0000:  68%|██████▊   | 274/400 [42:09<19:29,  9.28s/it]mesh065 mesh066 0.020705227
+mesh065 mesh066 0.020705227
+geo error: 0.0207:  68%|██████▊   | 274/400 [42:18<19:29,  9.28s/it]current mean geo error: 0.0190
+geo error: 0.0207:  69%|██████▉   | 275/400 [42:18<19:20,  9.29s/it]mesh065 mesh067 0.0141024105
+mesh065 mesh067 0.0141024105
+geo error: 0.0141:  69%|██████▉   | 275/400 [42:28<19:20,  9.29s/it]current mean geo error: 0.0190
+geo error: 0.0141:  69%|██████▉   | 276/400 [42:28<19:19,  9.35s/it]mesh065 mesh068 0.01814164
+mesh065 mesh068 0.01814164
+geo error: 0.0181:  69%|██████▉   | 276/400 [42:37<19:19,  9.35s/it]current mean geo error: 0.0190
+geo error: 0.0181:  69%|██████▉   | 277/400 [42:37<19:08,  9.34s/it]mesh065 mesh069 0.020206124
+mesh065 mesh069 0.020206124
+geo error: 0.0202:  69%|██████▉   | 277/400 [42:46<19:08,  9.34s/it]current mean geo error: 0.0190
+geo error: 0.0202:  70%|██████▉   | 278/400 [42:46<18:53,  9.29s/it]mesh065 mesh070 0.021419385
+mesh065 mesh070 0.021419385
+geo error: 0.0214:  70%|██████▉   | 278/400 [42:56<18:53,  9.29s/it]current mean geo error: 0.0190
+geo error: 0.0214:  70%|██████▉   | 279/400 [42:56<18:44,  9.30s/it]mesh065 mesh071 0.03623972
+mesh065 mesh071 0.03623972
+geo error: 0.0362:  70%|██████▉   | 279/400 [43:05<18:44,  9.30s/it]current mean geo error: 0.0190
+geo error: 0.0362:  70%|███████   | 280/400 [43:05<18:39,  9.33s/it]mesh066 mesh052 0.017936438
+mesh066 mesh052 0.017936438
+geo error: 0.0179:  70%|███████   | 280/400 [43:14<18:39,  9.33s/it]current mean geo error: 0.0190
+geo error: 0.0179:  70%|███████   | 281/400 [43:14<18:28,  9.32s/it]mesh066 mesh053 0.015963137
+mesh066 mesh053 0.015963137
+geo error: 0.0160:  70%|███████   | 281/400 [43:24<18:28,  9.32s/it]current mean geo error: 0.0190
+geo error: 0.0160:  70%|███████   | 282/400 [43:24<18:19,  9.31s/it]mesh066 mesh054 0.021279532
+mesh066 mesh054 0.021279532
+geo error: 0.0213:  70%|███████   | 282/400 [43:33<18:19,  9.31s/it]current mean geo error: 0.0190
+geo error: 0.0213:  71%|███████   | 283/400 [43:33<18:09,  9.31s/it]mesh066 mesh055 0.026524752
+mesh066 mesh055 0.026524752
+geo error: 0.0265:  71%|███████   | 283/400 [43:42<18:09,  9.31s/it]current mean geo error: 0.0191
+geo error: 0.0265:  71%|███████   | 284/400 [43:42<17:59,  9.30s/it]mesh066 mesh056 0.0224582
+mesh066 mesh056 0.0224582
+geo error: 0.0225:  71%|███████   | 284/400 [43:52<17:59,  9.30s/it]current mean geo error: 0.0191
+geo error: 0.0225:  71%|███████▏  | 285/400 [43:52<17:54,  9.34s/it]mesh066 mesh057 0.021868296
+mesh066 mesh057 0.021868296
+geo error: 0.0219:  71%|███████▏  | 285/400 [44:01<17:54,  9.34s/it]current mean geo error: 0.0191
+geo error: 0.0219:  72%|███████▏  | 286/400 [44:01<17:45,  9.35s/it]mesh066 mesh058 0.01978704
+mesh066 mesh058 0.01978704
+geo error: 0.0198:  72%|███████▏  | 286/400 [44:10<17:45,  9.35s/it]current mean geo error: 0.0191
+geo error: 0.0198:  72%|███████▏  | 287/400 [44:10<17:34,  9.33s/it]mesh066 mesh059 0.019534042
+mesh066 mesh059 0.019534042
+geo error: 0.0195:  72%|███████▏  | 287/400 [44:20<17:34,  9.33s/it]current mean geo error: 0.0191
+geo error: 0.0195:  72%|███████▏  | 288/400 [44:20<17:24,  9.33s/it]mesh066 mesh060 0.017940287
+mesh066 mesh060 0.017940287
+geo error: 0.0179:  72%|███████▏  | 288/400 [44:29<17:24,  9.33s/it]current mean geo error: 0.0191
+geo error: 0.0179:  72%|███████▏  | 289/400 [44:29<17:17,  9.35s/it]mesh066 mesh061 0.018569317
+mesh066 mesh061 0.018569317
+geo error: 0.0186:  72%|███████▏  | 289/400 [44:39<17:17,  9.35s/it]current mean geo error: 0.0191
+geo error: 0.0186:  72%|███████▎  | 290/400 [44:39<17:17,  9.43s/it]mesh066 mesh062 0.01777899
+mesh066 mesh062 0.01777899
+geo error: 0.0178:  72%|███████▎  | 290/400 [44:48<17:17,  9.43s/it]current mean geo error: 0.0191
+geo error: 0.0178:  73%|███████▎  | 291/400 [44:48<17:06,  9.41s/it]mesh066 mesh063 0.022286069
+mesh066 mesh063 0.022286069
+geo error: 0.0223:  73%|███████▎  | 291/400 [44:57<17:06,  9.41s/it]current mean geo error: 0.0191
+geo error: 0.0223:  73%|███████▎  | 292/400 [44:57<16:52,  9.38s/it]mesh066 mesh064 0.023216585
+mesh066 mesh064 0.023216585
+geo error: 0.0232:  73%|███████▎  | 292/400 [45:07<16:52,  9.38s/it]current mean geo error: 0.0191
+geo error: 0.0232:  73%|███████▎  | 293/400 [45:07<16:41,  9.36s/it]mesh066 mesh065 0.021074153
+mesh066 mesh065 0.021074153
+geo error: 0.0211:  73%|███████▎  | 293/400 [45:16<16:41,  9.36s/it]current mean geo error: 0.0191
+geo error: 0.0211:  74%|███████▎  | 294/400 [45:16<16:33,  9.37s/it]mesh066 mesh066 0.0
+mesh066 mesh066 0.0
+geo error: 0.0000:  74%|███████▎  | 294/400 [45:25<16:33,  9.37s/it]current mean geo error: 0.0190
+geo error: 0.0000:  74%|███████▍  | 295/400 [45:25<16:21,  9.35s/it]mesh066 mesh067 0.02066963
+mesh066 mesh067 0.02066963
+geo error: 0.0207:  74%|███████▍  | 295/400 [45:35<16:21,  9.35s/it]current mean geo error: 0.0190
+geo error: 0.0207:  74%|███████▍  | 296/400 [45:35<16:11,  9.34s/it]mesh066 mesh068 0.02336181
+mesh066 mesh068 0.02336181
+geo error: 0.0234:  74%|███████▍  | 296/400 [45:44<16:11,  9.34s/it]current mean geo error: 0.0191
+geo error: 0.0234:  74%|███████▍  | 297/400 [45:44<15:59,  9.32s/it]mesh066 mesh069 0.022622557
+mesh066 mesh069 0.022622557
+geo error: 0.0226:  74%|███████▍  | 297/400 [45:53<15:59,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0226:  74%|███████▍  | 298/400 [45:53<15:50,  9.32s/it]mesh066 mesh070 0.021177502
+mesh066 mesh070 0.021177502
+geo error: 0.0212:  74%|███████▍  | 298/400 [46:02<15:50,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0212:  75%|███████▍  | 299/400 [46:02<15:37,  9.28s/it]mesh066 mesh071 0.03166579
+mesh066 mesh071 0.03166579
+geo error: 0.0317:  75%|███████▍  | 299/400 [46:12<15:37,  9.28s/it]current mean geo error: 0.0191
+geo error: 0.0317:  75%|███████▌  | 300/400 [46:12<15:29,  9.30s/it]mesh067 mesh052 0.021951424
+mesh067 mesh052 0.021951424
+geo error: 0.0220:  75%|███████▌  | 300/400 [46:21<15:29,  9.30s/it]current mean geo error: 0.0191
+geo error: 0.0220:  75%|███████▌  | 301/400 [46:21<15:22,  9.32s/it]mesh067 mesh053 0.019383106
+mesh067 mesh053 0.019383106
+geo error: 0.0194:  75%|███████▌  | 301/400 [46:30<15:22,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0194:  76%|███████▌  | 302/400 [46:30<15:13,  9.32s/it]mesh067 mesh054 0.023541994
+mesh067 mesh054 0.023541994
+geo error: 0.0235:  76%|███████▌  | 302/400 [46:40<15:13,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0235:  76%|███████▌  | 303/400 [46:40<15:05,  9.34s/it]mesh067 mesh055 0.020336082
+mesh067 mesh055 0.020336082
+geo error: 0.0203:  76%|███████▌  | 303/400 [46:49<15:05,  9.34s/it]current mean geo error: 0.0191
+geo error: 0.0203:  76%|███████▌  | 304/400 [46:49<15:00,  9.38s/it]mesh067 mesh056 0.017085437
+mesh067 mesh056 0.017085437
+geo error: 0.0171:  76%|███████▌  | 304/400 [46:58<15:00,  9.38s/it]current mean geo error: 0.0191
+geo error: 0.0171:  76%|███████▋  | 305/400 [46:58<14:44,  9.31s/it]mesh067 mesh057 0.017346501
+mesh067 mesh057 0.017346501
+geo error: 0.0173:  76%|███████▋  | 305/400 [47:07<14:44,  9.31s/it]current mean geo error: 0.0191
+geo error: 0.0173:  76%|███████▋  | 306/400 [47:07<14:29,  9.25s/it]mesh067 mesh058 0.013343421
+mesh067 mesh058 0.013343421
+geo error: 0.0133:  76%|███████▋  | 306/400 [47:17<14:29,  9.25s/it]current mean geo error: 0.0191
+geo error: 0.0133:  77%|███████▋  | 307/400 [47:17<14:17,  9.22s/it]mesh067 mesh059 0.017317109
+mesh067 mesh059 0.017317109
+geo error: 0.0173:  77%|███████▋  | 307/400 [47:26<14:17,  9.22s/it]current mean geo error: 0.0191
+geo error: 0.0173:  77%|███████▋  | 308/400 [47:26<14:07,  9.21s/it]mesh067 mesh060 0.019635782
+mesh067 mesh060 0.019635782
+geo error: 0.0196:  77%|███████▋  | 308/400 [47:35<14:07,  9.21s/it]current mean geo error: 0.0191
+geo error: 0.0196:  77%|███████▋  | 309/400 [47:35<13:58,  9.21s/it]mesh067 mesh061 0.01901362
+mesh067 mesh061 0.01901362
+geo error: 0.0190:  77%|███████▋  | 309/400 [47:44<13:58,  9.21s/it]current mean geo error: 0.0191
+geo error: 0.0190:  78%|███████▊  | 310/400 [47:44<13:48,  9.21s/it]mesh067 mesh062 0.017867086
+mesh067 mesh062 0.017867086
+geo error: 0.0179:  78%|███████▊  | 310/400 [47:53<13:48,  9.21s/it]current mean geo error: 0.0191
+geo error: 0.0179:  78%|███████▊  | 311/400 [47:53<13:39,  9.21s/it]mesh067 mesh063 0.01348094
+mesh067 mesh063 0.01348094
+geo error: 0.0135:  78%|███████▊  | 311/400 [48:03<13:39,  9.21s/it]current mean geo error: 0.0191
+geo error: 0.0135:  78%|███████▊  | 312/400 [48:03<13:29,  9.20s/it]mesh067 mesh064 0.015436921
+mesh067 mesh064 0.015436921
+geo error: 0.0154:  78%|███████▊  | 312/400 [48:12<13:29,  9.20s/it]current mean geo error: 0.0191
+geo error: 0.0154:  78%|███████▊  | 313/400 [48:12<13:18,  9.18s/it]mesh067 mesh065 0.014061142
+mesh067 mesh065 0.014061142
+geo error: 0.0141:  78%|███████▊  | 313/400 [48:21<13:18,  9.18s/it]current mean geo error: 0.0191
+geo error: 0.0141:  78%|███████▊  | 314/400 [48:21<13:10,  9.19s/it]mesh067 mesh066 0.020671587
+mesh067 mesh066 0.020671587
+geo error: 0.0207:  78%|███████▊  | 314/400 [48:30<13:10,  9.19s/it]current mean geo error: 0.0191
+geo error: 0.0207:  79%|███████▉  | 315/400 [48:30<13:03,  9.22s/it]mesh067 mesh067 0.0
+mesh067 mesh067 0.0
+geo error: 0.0000:  79%|███████▉  | 315/400 [48:39<13:03,  9.22s/it]current mean geo error: 0.0190
+geo error: 0.0000:  79%|███████▉  | 316/400 [48:39<12:50,  9.18s/it]mesh067 mesh068 0.017267682
+mesh067 mesh068 0.017267682
+geo error: 0.0173:  79%|███████▉  | 316/400 [48:49<12:50,  9.18s/it]current mean geo error: 0.0190
+geo error: 0.0173:  79%|███████▉  | 317/400 [48:49<12:42,  9.18s/it]mesh067 mesh069 0.018814791
+mesh067 mesh069 0.018814791
+geo error: 0.0188:  79%|███████▉  | 317/400 [48:58<12:42,  9.18s/it]current mean geo error: 0.0190
+geo error: 0.0188:  80%|███████▉  | 318/400 [48:58<12:38,  9.25s/it]mesh067 mesh070 0.022019261
+mesh067 mesh070 0.022019261
+geo error: 0.0220:  80%|███████▉  | 318/400 [49:07<12:38,  9.25s/it]current mean geo error: 0.0190
+geo error: 0.0220:  80%|███████▉  | 319/400 [49:07<12:26,  9.21s/it]mesh067 mesh071 0.033987757
+mesh067 mesh071 0.033987757
+geo error: 0.0340:  80%|███████▉  | 319/400 [49:16<12:26,  9.21s/it]current mean geo error: 0.0191
+geo error: 0.0340:  80%|████████  | 320/400 [49:16<12:18,  9.23s/it]mesh068 mesh052 0.01901091
+mesh068 mesh052 0.01901091
+geo error: 0.0190:  80%|████████  | 320/400 [49:25<12:18,  9.23s/it]current mean geo error: 0.0191
+geo error: 0.0190:  80%|████████  | 321/400 [49:25<12:08,  9.22s/it]mesh068 mesh053 0.020451065
+mesh068 mesh053 0.020451065
+geo error: 0.0205:  80%|████████  | 321/400 [49:35<12:08,  9.22s/it]current mean geo error: 0.0191
+geo error: 0.0205:  80%|████████  | 322/400 [49:35<11:58,  9.22s/it]mesh068 mesh054 0.02121628
+mesh068 mesh054 0.02121628
+geo error: 0.0212:  80%|████████  | 322/400 [49:44<11:58,  9.22s/it]current mean geo error: 0.0191
+geo error: 0.0212:  81%|████████  | 323/400 [49:44<11:49,  9.21s/it]mesh068 mesh055 0.020217987
+mesh068 mesh055 0.020217987
+geo error: 0.0202:  81%|████████  | 323/400 [49:53<11:49,  9.21s/it]current mean geo error: 0.0191
+geo error: 0.0202:  81%|████████  | 324/400 [49:53<11:43,  9.25s/it]mesh068 mesh056 0.014236711
+mesh068 mesh056 0.014236711
+geo error: 0.0142:  81%|████████  | 324/400 [50:03<11:43,  9.25s/it]current mean geo error: 0.0191
+geo error: 0.0142:  81%|████████▏ | 325/400 [50:03<11:33,  9.25s/it]mesh068 mesh057 0.01583847
+mesh068 mesh057 0.01583847
+geo error: 0.0158:  81%|████████▏ | 325/400 [50:12<11:33,  9.25s/it]current mean geo error: 0.0190
+geo error: 0.0158:  82%|████████▏ | 326/400 [50:12<11:26,  9.28s/it]mesh068 mesh058 0.016209016
+mesh068 mesh058 0.016209016
+geo error: 0.0162:  82%|████████▏ | 326/400 [50:21<11:26,  9.28s/it]current mean geo error: 0.0190
+geo error: 0.0162:  82%|████████▏ | 327/400 [50:21<11:16,  9.27s/it]mesh068 mesh059 0.018354774
+mesh068 mesh059 0.018354774
+geo error: 0.0184:  82%|████████▏ | 327/400 [50:30<11:16,  9.27s/it]current mean geo error: 0.0190
+geo error: 0.0184:  82%|████████▏ | 328/400 [50:30<11:04,  9.23s/it]mesh068 mesh060 0.018906254
+mesh068 mesh060 0.018906254
+geo error: 0.0189:  82%|████████▏ | 328/400 [50:39<11:04,  9.23s/it]current mean geo error: 0.0190
+geo error: 0.0189:  82%|████████▏ | 329/400 [50:39<10:52,  9.19s/it]mesh068 mesh061 0.015991822
+mesh068 mesh061 0.015991822
+geo error: 0.0160:  82%|████████▏ | 329/400 [50:48<10:52,  9.19s/it]current mean geo error: 0.0190
+geo error: 0.0160:  82%|████████▎ | 330/400 [50:49<10:42,  9.18s/it]mesh068 mesh062 0.018552702
+mesh068 mesh062 0.018552702
+geo error: 0.0186:  82%|████████▎ | 330/400 [50:58<10:42,  9.18s/it]current mean geo error: 0.0190
+geo error: 0.0186:  83%|████████▎ | 331/400 [50:58<10:36,  9.23s/it]mesh068 mesh063 0.014171304
+mesh068 mesh063 0.014171304
+geo error: 0.0142:  83%|████████▎ | 331/400 [51:07<10:36,  9.23s/it]current mean geo error: 0.0190
+geo error: 0.0142:  83%|████████▎ | 332/400 [51:07<10:30,  9.27s/it]mesh068 mesh064 0.014261072
+mesh068 mesh064 0.014261072
+geo error: 0.0143:  83%|████████▎ | 332/400 [51:16<10:30,  9.27s/it]current mean geo error: 0.0190
+geo error: 0.0143:  83%|████████▎ | 333/400 [51:16<10:19,  9.25s/it]mesh068 mesh065 0.017657833
+mesh068 mesh065 0.017657833
+geo error: 0.0177:  83%|████████▎ | 333/400 [51:26<10:19,  9.25s/it]current mean geo error: 0.0190
+geo error: 0.0177:  84%|████████▎ | 334/400 [51:26<10:09,  9.24s/it]mesh068 mesh066 0.023275807
+mesh068 mesh066 0.023275807
+geo error: 0.0233:  84%|████████▎ | 334/400 [51:35<10:09,  9.24s/it]current mean geo error: 0.0190
+geo error: 0.0233:  84%|████████▍ | 335/400 [51:35<09:59,  9.22s/it]mesh068 mesh067 0.01689277
+mesh068 mesh067 0.01689277
+geo error: 0.0169:  84%|████████▍ | 335/400 [51:44<09:59,  9.22s/it]current mean geo error: 0.0190
+geo error: 0.0169:  84%|████████▍ | 336/400 [51:44<09:49,  9.22s/it]mesh068 mesh068 0.0
+mesh068 mesh068 0.0
+geo error: 0.0000:  84%|████████▍ | 336/400 [51:53<09:49,  9.22s/it]current mean geo error: 0.0189
+geo error: 0.0000:  84%|████████▍ | 337/400 [51:53<09:40,  9.21s/it]mesh068 mesh069 0.019463303
+mesh068 mesh069 0.019463303
+geo error: 0.0195:  84%|████████▍ | 337/400 [52:03<09:40,  9.21s/it]current mean geo error: 0.0189
+geo error: 0.0195:  84%|████████▍ | 338/400 [52:03<09:32,  9.24s/it]mesh068 mesh070 0.02081741
+mesh068 mesh070 0.02081741
+geo error: 0.0208:  84%|████████▍ | 338/400 [52:12<09:32,  9.24s/it]current mean geo error: 0.0189
+geo error: 0.0208:  85%|████████▍ | 339/400 [52:12<09:22,  9.23s/it]mesh068 mesh071 0.029954901
+mesh068 mesh071 0.029954901
+geo error: 0.0300:  85%|████████▍ | 339/400 [52:21<09:22,  9.23s/it]current mean geo error: 0.0190
+geo error: 0.0300:  85%|████████▌ | 340/400 [52:21<09:12,  9.20s/it]mesh069 mesh052 0.020297207
+mesh069 mesh052 0.020297207
+geo error: 0.0203:  85%|████████▌ | 340/400 [52:30<09:12,  9.20s/it]current mean geo error: 0.0190
+geo error: 0.0203:  85%|████████▌ | 341/400 [52:30<09:02,  9.19s/it]mesh069 mesh053 0.020741273
+mesh069 mesh053 0.020741273
+geo error: 0.0207:  85%|████████▌ | 341/400 [52:39<09:02,  9.19s/it]current mean geo error: 0.0190
+geo error: 0.0207:  86%|████████▌ | 342/400 [52:39<08:53,  9.19s/it]mesh069 mesh054 0.020647146
+mesh069 mesh054 0.020647146
+geo error: 0.0206:  86%|████████▌ | 342/400 [52:49<08:53,  9.19s/it]current mean geo error: 0.0190
+geo error: 0.0206:  86%|████████▌ | 343/400 [52:49<08:45,  9.22s/it]mesh069 mesh055 0.024174003
+mesh069 mesh055 0.024174003
+geo error: 0.0242:  86%|████████▌ | 343/400 [52:58<08:45,  9.22s/it]current mean geo error: 0.0190
+geo error: 0.0242:  86%|████████▌ | 344/400 [52:58<08:36,  9.22s/it]mesh069 mesh056 0.019875543
+mesh069 mesh056 0.019875543
+geo error: 0.0199:  86%|████████▌ | 344/400 [53:07<08:36,  9.22s/it]current mean geo error: 0.0190
+geo error: 0.0199:  86%|████████▋ | 345/400 [53:07<08:26,  9.21s/it]mesh069 mesh057 0.01958241
+mesh069 mesh057 0.01958241
+geo error: 0.0196:  86%|████████▋ | 345/400 [53:16<08:26,  9.21s/it]current mean geo error: 0.0190
+geo error: 0.0196:  86%|████████▋ | 346/400 [53:16<08:20,  9.27s/it]mesh069 mesh058 0.018564163
+mesh069 mesh058 0.018564163
+geo error: 0.0186:  86%|████████▋ | 346/400 [53:26<08:20,  9.27s/it]current mean geo error: 0.0190
+geo error: 0.0186:  87%|████████▋ | 347/400 [53:26<08:10,  9.25s/it]mesh069 mesh059 0.021563703
+mesh069 mesh059 0.021563703
+geo error: 0.0216:  87%|████████▋ | 347/400 [53:35<08:10,  9.25s/it]current mean geo error: 0.0190
+geo error: 0.0216:  87%|████████▋ | 348/400 [53:35<08:00,  9.24s/it]mesh069 mesh060 0.020170938
+mesh069 mesh060 0.020170938
+geo error: 0.0202:  87%|████████▋ | 348/400 [53:44<08:00,  9.24s/it]current mean geo error: 0.0190
+geo error: 0.0202:  87%|████████▋ | 349/400 [53:44<07:50,  9.23s/it]mesh069 mesh061 0.020002559
+mesh069 mesh061 0.020002559
+geo error: 0.0200:  87%|████████▋ | 349/400 [53:53<07:50,  9.23s/it]current mean geo error: 0.0190
+geo error: 0.0200:  88%|████████▊ | 350/400 [53:53<07:40,  9.21s/it]mesh069 mesh062 0.020226838
+mesh069 mesh062 0.020226838
+geo error: 0.0202:  88%|████████▊ | 350/400 [54:02<07:40,  9.21s/it]current mean geo error: 0.0190
+geo error: 0.0202:  88%|████████▊ | 351/400 [54:02<07:31,  9.21s/it]mesh069 mesh063 0.016425226
+mesh069 mesh063 0.016425226
+geo error: 0.0164:  88%|████████▊ | 351/400 [54:12<07:31,  9.21s/it]current mean geo error: 0.0190
+geo error: 0.0164:  88%|████████▊ | 352/400 [54:12<07:22,  9.21s/it]mesh069 mesh064 0.018369708
+mesh069 mesh064 0.018369708
+geo error: 0.0184:  88%|████████▊ | 352/400 [54:21<07:22,  9.21s/it]current mean geo error: 0.0190
+geo error: 0.0184:  88%|████████▊ | 353/400 [54:21<07:14,  9.23s/it]mesh069 mesh065 0.021136453
+mesh069 mesh065 0.021136453
+geo error: 0.0211:  88%|████████▊ | 353/400 [54:30<07:14,  9.23s/it]current mean geo error: 0.0190
+geo error: 0.0211:  88%|████████▊ | 354/400 [54:30<07:04,  9.22s/it]mesh069 mesh066 0.022258615
+mesh069 mesh066 0.022258615
+geo error: 0.0223:  88%|████████▊ | 354/400 [54:39<07:04,  9.22s/it]current mean geo error: 0.0190
+geo error: 0.0223:  89%|████████▉ | 355/400 [54:39<06:53,  9.20s/it]mesh069 mesh067 0.019141123
+mesh069 mesh067 0.019141123
+geo error: 0.0191:  89%|████████▉ | 355/400 [54:48<06:53,  9.20s/it]current mean geo error: 0.0190
+geo error: 0.0191:  89%|████████▉ | 356/400 [54:48<06:45,  9.22s/it]mesh069 mesh068 0.019223412
+mesh069 mesh068 0.019223412
+geo error: 0.0192:  89%|████████▉ | 356/400 [54:58<06:45,  9.22s/it]current mean geo error: 0.0190
+geo error: 0.0192:  89%|████████▉ | 357/400 [54:58<06:37,  9.24s/it]mesh069 mesh069 0.0
+mesh069 mesh069 0.0
+geo error: 0.0000:  89%|████████▉ | 357/400 [55:07<06:37,  9.24s/it]current mean geo error: 0.0190
+geo error: 0.0000:  90%|████████▉ | 358/400 [55:07<06:30,  9.29s/it]mesh069 mesh070 0.020448038
+mesh069 mesh070 0.020448038
+geo error: 0.0204:  90%|████████▉ | 358/400 [55:17<06:30,  9.29s/it]current mean geo error: 0.0190
+geo error: 0.0204:  90%|████████▉ | 359/400 [55:17<06:22,  9.32s/it]mesh069 mesh071 0.03131478
+mesh069 mesh071 0.03131478
+geo error: 0.0313:  90%|████████▉ | 359/400 [55:26<06:22,  9.32s/it]current mean geo error: 0.0190
+geo error: 0.0313:  90%|█████████ | 360/400 [55:26<06:12,  9.31s/it]mesh070 mesh052 0.019529104
+mesh070 mesh052 0.019529104
+geo error: 0.0195:  90%|█████████ | 360/400 [55:35<06:12,  9.31s/it]current mean geo error: 0.0190
+geo error: 0.0195:  90%|█████████ | 361/400 [55:35<06:03,  9.31s/it]mesh070 mesh053 0.017877879
+mesh070 mesh053 0.017877879
+geo error: 0.0179:  90%|█████████ | 361/400 [55:44<06:03,  9.31s/it]current mean geo error: 0.0190
+geo error: 0.0179:  90%|█████████ | 362/400 [55:44<05:53,  9.31s/it]mesh070 mesh054 0.020252435
+mesh070 mesh054 0.020252435
+geo error: 0.0203:  90%|█████████ | 362/400 [55:54<05:53,  9.31s/it]current mean geo error: 0.0190
+geo error: 0.0203:  91%|█████████ | 363/400 [55:54<05:44,  9.31s/it]mesh070 mesh055 0.025704052
+mesh070 mesh055 0.025704052
+geo error: 0.0257:  91%|█████████ | 363/400 [56:03<05:44,  9.31s/it]current mean geo error: 0.0190
+geo error: 0.0257:  91%|█████████ | 364/400 [56:03<05:36,  9.34s/it]mesh070 mesh056 0.020098902
+mesh070 mesh056 0.020098902
+geo error: 0.0201:  91%|█████████ | 364/400 [56:13<05:36,  9.34s/it]current mean geo error: 0.0190
+geo error: 0.0201:  91%|█████████▏| 365/400 [56:13<05:28,  9.38s/it]mesh070 mesh057 0.022001272
+mesh070 mesh057 0.022001272
+geo error: 0.0220:  91%|█████████▏| 365/400 [56:22<05:28,  9.38s/it]current mean geo error: 0.0191
+geo error: 0.0220:  92%|█████████▏| 366/400 [56:22<05:17,  9.33s/it]mesh070 mesh058 0.021604786
+mesh070 mesh058 0.021604786
+geo error: 0.0216:  92%|█████████▏| 366/400 [56:31<05:17,  9.33s/it]current mean geo error: 0.0191
+geo error: 0.0216:  92%|█████████▏| 367/400 [56:31<05:06,  9.30s/it]mesh070 mesh059 0.023134518
+mesh070 mesh059 0.023134518
+geo error: 0.0231:  92%|█████████▏| 367/400 [56:40<05:06,  9.30s/it]current mean geo error: 0.0191
+geo error: 0.0231:  92%|█████████▏| 368/400 [56:40<04:56,  9.27s/it]mesh070 mesh060 0.017398639
+mesh070 mesh060 0.017398639
+geo error: 0.0174:  92%|█████████▏| 368/400 [56:50<04:56,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0174:  92%|█████████▏| 369/400 [56:50<04:48,  9.30s/it]mesh070 mesh061 0.020556143
+mesh070 mesh061 0.020556143
+geo error: 0.0206:  92%|█████████▏| 369/400 [56:59<04:48,  9.30s/it]current mean geo error: 0.0191
+geo error: 0.0206:  92%|█████████▎| 370/400 [56:59<04:39,  9.33s/it]mesh070 mesh062 0.020509508
+mesh070 mesh062 0.020509508
+geo error: 0.0205:  92%|█████████▎| 370/400 [57:08<04:39,  9.33s/it]current mean geo error: 0.0191
+geo error: 0.0205:  93%|█████████▎| 371/400 [57:08<04:30,  9.32s/it]mesh070 mesh063 0.02115
+mesh070 mesh063 0.02115
+geo error: 0.0212:  93%|█████████▎| 371/400 [57:18<04:30,  9.32s/it]current mean geo error: 0.0191
+geo error: 0.0212:  93%|█████████▎| 372/400 [57:18<04:20,  9.29s/it]mesh070 mesh064 0.02054852
+mesh070 mesh064 0.02054852
+geo error: 0.0205:  93%|█████████▎| 372/400 [57:27<04:20,  9.29s/it]current mean geo error: 0.0191
+geo error: 0.0205:  93%|█████████▎| 373/400 [57:27<04:09,  9.26s/it]mesh070 mesh065 0.021518134
+mesh070 mesh065 0.021518134
+geo error: 0.0215:  93%|█████████▎| 373/400 [57:36<04:09,  9.26s/it]current mean geo error: 0.0191
+geo error: 0.0215:  94%|█████████▎| 374/400 [57:36<04:00,  9.24s/it]mesh070 mesh066 0.020436209
+mesh070 mesh066 0.020436209
+geo error: 0.0204:  94%|█████████▎| 374/400 [57:45<04:00,  9.24s/it]current mean geo error: 0.0191
+geo error: 0.0204:  94%|█████████▍| 375/400 [57:45<03:51,  9.26s/it]mesh070 mesh067 0.021608956
+mesh070 mesh067 0.021608956
+geo error: 0.0216:  94%|█████████▍| 375/400 [57:54<03:51,  9.26s/it]current mean geo error: 0.0191
+geo error: 0.0216:  94%|█████████▍| 376/400 [57:54<03:41,  9.24s/it]mesh070 mesh068 0.020747375
+mesh070 mesh068 0.020747375
+geo error: 0.0207:  94%|█████████▍| 376/400 [58:04<03:41,  9.24s/it]current mean geo error: 0.0191
+geo error: 0.0207:  94%|█████████▍| 377/400 [58:04<03:32,  9.23s/it]mesh070 mesh069 0.020964984
+mesh070 mesh069 0.020964984
+geo error: 0.0210:  94%|█████████▍| 377/400 [58:13<03:32,  9.23s/it]current mean geo error: 0.0191
+geo error: 0.0210:  94%|█████████▍| 378/400 [58:13<03:22,  9.22s/it]mesh070 mesh070 0.0
+mesh070 mesh070 0.0
+geo error: 0.0000:  94%|█████████▍| 378/400 [58:22<03:22,  9.22s/it]current mean geo error: 0.0191
+geo error: 0.0000:  95%|█████████▍| 379/400 [58:22<03:14,  9.27s/it]mesh070 mesh071 0.029127771
+mesh070 mesh071 0.029127771
+geo error: 0.0291:  95%|█████████▍| 379/400 [58:32<03:14,  9.27s/it]current mean geo error: 0.0191
+geo error: 0.0291:  95%|█████████▌| 380/400 [58:32<03:06,  9.31s/it]mesh071 mesh052 0.028979678
+mesh071 mesh052 0.028979678
+geo error: 0.0290:  95%|█████████▌| 380/400 [58:41<03:06,  9.31s/it]current mean geo error: 0.0191
+geo error: 0.0290:  95%|█████████▌| 381/400 [58:41<02:56,  9.31s/it]mesh071 mesh053 0.031920467
+mesh071 mesh053 0.031920467
+geo error: 0.0319:  95%|█████████▌| 381/400 [58:50<02:56,  9.31s/it]current mean geo error: 0.0191
+geo error: 0.0319:  96%|█████████▌| 382/400 [58:50<02:46,  9.27s/it]mesh071 mesh054 0.025686804
+mesh071 mesh054 0.025686804
+geo error: 0.0257:  96%|█████████▌| 382/400 [58:59<02:46,  9.27s/it]current mean geo error: 0.0192
+geo error: 0.0257:  96%|█████████▌| 383/400 [58:59<02:37,  9.25s/it]mesh071 mesh055 0.028031757
+mesh071 mesh055 0.028031757
+geo error: 0.0280:  96%|█████████▌| 383/400 [59:09<02:37,  9.25s/it]current mean geo error: 0.0192
+geo error: 0.0280:  96%|█████████▌| 384/400 [59:09<02:27,  9.24s/it]mesh071 mesh056 0.029854752
+mesh071 mesh056 0.029854752
+geo error: 0.0299:  96%|█████████▌| 384/400 [59:18<02:27,  9.24s/it]current mean geo error: 0.0192
+geo error: 0.0299:  96%|█████████▋| 385/400 [59:18<02:19,  9.29s/it]mesh071 mesh057 0.03115654
+mesh071 mesh057 0.03115654
+geo error: 0.0312:  96%|█████████▋| 385/400 [59:27<02:19,  9.29s/it]current mean geo error: 0.0192
+geo error: 0.0312:  96%|█████████▋| 386/400 [59:27<02:10,  9.35s/it]mesh071 mesh058 0.035319068
+mesh071 mesh058 0.035319068
+geo error: 0.0353:  96%|█████████▋| 386/400 [59:37<02:10,  9.35s/it]current mean geo error: 0.0193
+geo error: 0.0353:  97%|█████████▋| 387/400 [59:37<02:01,  9.33s/it]mesh071 mesh059 0.032621812
+mesh071 mesh059 0.032621812
+geo error: 0.0326:  97%|█████████▋| 387/400 [59:46<02:01,  9.33s/it]current mean geo error: 0.0193
+geo error: 0.0326:  97%|█████████▋| 388/400 [59:46<01:51,  9.32s/it]mesh071 mesh060 0.032017514
+mesh071 mesh060 0.032017514
+geo error: 0.0320:  97%|█████████▋| 388/400 [59:55<01:51,  9.32s/it]current mean geo error: 0.0194
+geo error: 0.0320:  97%|█████████▋| 389/400 [59:55<01:42,  9.32s/it]mesh071 mesh061 0.027668793
+mesh071 mesh061 0.027668793
+geo error: 0.0277:  97%|█████████▋| 389/400 [1:00:05<01:42,  9.32s/it]current mean geo error: 0.0194
+geo error: 0.0277:  98%|█████████▊| 390/400 [1:00:05<01:33,  9.31s/it]mesh071 mesh062 0.03009342
+mesh071 mesh062 0.03009342
+geo error: 0.0301:  98%|█████████▊| 390/400 [1:00:14<01:33,  9.31s/it]current mean geo error: 0.0194
+geo error: 0.0301:  98%|█████████▊| 391/400 [1:00:14<01:23,  9.31s/it]mesh071 mesh063 0.028825711
+mesh071 mesh063 0.028825711
+geo error: 0.0288:  98%|█████████▊| 391/400 [1:00:23<01:23,  9.31s/it]current mean geo error: 0.0194
+geo error: 0.0288:  98%|█████████▊| 392/400 [1:00:23<01:14,  9.31s/it]mesh071 mesh064 0.028480286
+mesh071 mesh064 0.028480286
+geo error: 0.0285:  98%|█████████▊| 392/400 [1:00:33<01:14,  9.31s/it]current mean geo error: 0.0194
+geo error: 0.0285:  98%|█████████▊| 393/400 [1:00:33<01:05,  9.30s/it]mesh071 mesh065 0.035401292
+mesh071 mesh065 0.035401292
+geo error: 0.0354:  98%|█████████▊| 393/400 [1:00:42<01:05,  9.30s/it]current mean geo error: 0.0195
+geo error: 0.0354:  98%|█████████▊| 394/400 [1:00:42<00:55,  9.30s/it]mesh071 mesh066 0.03100334
+mesh071 mesh066 0.03100334
+geo error: 0.0310:  98%|█████████▊| 394/400 [1:00:51<00:55,  9.30s/it]current mean geo error: 0.0195
+geo error: 0.0310:  99%|█████████▉| 395/400 [1:00:51<00:46,  9.28s/it]mesh071 mesh067 0.032658875
+mesh071 mesh067 0.032658875
+geo error: 0.0327:  99%|█████████▉| 395/400 [1:01:00<00:46,  9.28s/it]current mean geo error: 0.0196
+geo error: 0.0327:  99%|█████████▉| 396/400 [1:01:00<00:37,  9.25s/it]mesh071 mesh068 0.029587073
+mesh071 mesh068 0.029587073
+geo error: 0.0296:  99%|█████████▉| 396/400 [1:01:10<00:37,  9.25s/it]current mean geo error: 0.0196
+geo error: 0.0296:  99%|█████████▉| 397/400 [1:01:10<00:27,  9.29s/it]mesh071 mesh069 0.030445118
+mesh071 mesh069 0.030445118
+geo error: 0.0304:  99%|█████████▉| 397/400 [1:01:19<00:27,  9.29s/it]current mean geo error: 0.0196
+geo error: 0.0304: 100%|█████████▉| 398/400 [1:01:19<00:18,  9.26s/it]mesh071 mesh070 0.029024692
+mesh071 mesh070 0.029024692
+geo error: 0.0290: 100%|█████████▉| 398/400 [1:01:28<00:18,  9.26s/it]current mean geo error: 0.0196
+geo error: 0.0290: 100%|█████████▉| 399/400 [1:01:28<00:09,  9.28s/it]mesh071 mesh071 0.0
+mesh071 mesh071 0.0
+geo error: 0.0000: 100%|█████████▉| 399/400 [1:01:37<00:09,  9.28s/it]current mean geo error: 0.0196
+geo error: 0.0000: 100%|██████████| 400/400 [1:01:37<00:00,  9.28s/it]geo error: 0.0000: 100%|██████████| 400/400 [1:01:37<00:00,  9.24s/it]
+2026-11-14 15:20:07,217 INFO: Avg time: 8.5785
+2026-11-14 15:20:07,667 INFO: Val auc: 0.9021
+2026-11-14 15:20:07,667 INFO: Val avg error: 0.0196

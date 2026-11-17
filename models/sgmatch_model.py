@@ -8,20 +8,56 @@ from utils.fmap_util import nn_query, trim_basis, hybrid_fmap2pointmap
 from utils.geometry_util import get_all_operators
 from utils.geometry_util import to_basis, from_basis
 from utils.neigh_util import get_neigh
+from losses.jacobian_loss import JacobianLoss
 
-def cache_operators(data, cache_dir=None):
+# Optional Q branch imports (only when enabled)
+_Q_AVAILABLE = False
+try:
+    from utils.connection_laplacian import load_connection_cache
+    from utils.complex_functional_map import point_map_to_q_hat
+    _Q_AVAILABLE = True
+except ImportError:
+    pass
+
+def cache_operators(data, cache_dir=None, complex_cache_dir=None,
+                    use_complex_fmap=False, n_conn=30):
+    """
+    加载几何算子（标准 Laplacian + 可选 connection Laplacian）。
+    
+    use_complex_fmap=True 时加载 connection 算子并填入 operators 字典；
+    失败时报错（不静默）。
+    """
     data_x, data_y = data['first'], data['second']
-    if 'operators' not in data_x.keys():
-        cache_dir = cache_dir or data_x.get('cache_dir', None)
-        _, mass, L, evals, evecs, gradX, gradY = get_all_operators(data_x['verts'].cpu(), data_x['faces'].cpu(), k=128,
-                                                                    cache_dir=cache_dir)
-        
-        data_x['operators'] = {'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs, 'gradX': gradX, 'gradY': gradY}
-    if 'operators' not in data_y.keys():
-        cache_dir = cache_dir or data_y.get('cache_dir', None)
-        _, mass, L, evals, evecs, gradX, gradY = get_all_operators(data_y['verts'].cpu(), data_y['faces'].cpu(), k=128,
-                                                                    cache_dir=cache_dir)
-        data_y['operators'] = {'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs, 'gradX': gradX, 'gradY': gradY}
+
+    for side, d in [('first', data_x), ('second', data_y)]:
+        if 'operators' not in d:
+            cd = cache_dir or d.get('cache_dir', None)
+            _, mass, L, evals, evecs, gradX, gradY = get_all_operators(
+                d['verts'].cpu(), d['faces'].cpu(), k=128, cache_dir=cd)
+            d['operators'] = {
+                'mass': mass, 'L': L, 'evals': evals, 'evecs': evecs,
+                'gradX': gradX, 'gradY': gradY,
+            }
+
+        if use_complex_fmap and 'spec_grad' not in d['operators']:
+            if not _Q_AVAILABLE:
+                raise RuntimeError(
+                    'use_complex_fmap=True but utils.connection_laplacian '
+                    'could not be imported. Check dependencies (igl, etc.).')
+            # 若数据集已经加载了 connection 字段，直接搬入 operators
+            if 'spec_grad' in d:
+                d['operators'].update({
+                    'conn_evals': d['conn_evals'],
+                    'conn_evecs': d['conn_evecs'],
+                    'spec_grad':  d['spec_grad'],
+                })
+            else:
+                verts = d['verts'].squeeze(0) if d['verts'].dim() == 3 else d['verts']
+                faces = d['faces'].squeeze(0) if d['faces'].dim() == 3 else d['faces']
+                cached = load_connection_cache(
+                    verts.cpu(), faces.cpu(), k=n_conn,
+                    cache_dir=complex_cache_dir)
+                d['operators'].update(cached)
 
 @MODEL_REGISTRY.register()
 class SGMatch_Model(BaseModel):
@@ -32,13 +68,34 @@ class SGMatch_Model(BaseModel):
         self.heat_diffusion_tau = opt.get('heat_diffusion_tau', 0.0001)
         self.sm_feat = opt.get('sm_feat', False)
         self.neigh_k = opt.get('neigh_k', 32)
+        # Q branch config
+        self.use_complex_fmap = opt.get('use_complex_fmap', False)
+        self.n_conn = opt.get('n_conn', 30)
+        self.w_q_orth = opt.get('w_q_orth', 0.0)
+        self.w_pq = opt.get('w_pq', 0.0)  # Π–Q alignment (keep 0 for scheme B)
+        self.complex_cache_dir = opt.get('complex_cache_dir', None)
+        self.q_verbose = opt.get('q_verbose', True)
+        self._q_failed_once = False  # first failure raises; later warns
+        # Jacobian (local distortion) loss config
+        self.use_jacobian_loss = opt.get('use_jacobian_loss', False)
+        self.w_jacobian_det = opt.get('w_jacobian_det', 0.0)
+        self.w_jacobian_distortion = opt.get('w_jacobian_distortion', 0.0)
+        self.jacobian_loss = None
+        if self.use_jacobian_loss and (self.w_jacobian_det > 0 or self.w_jacobian_distortion > 0):
+            self.jacobian_loss = JacobianLoss(k_max=opt.get('jacobian_k_max', 3.0))
         if self.with_refine > 0:
             opt['is_train'] = True
         super(SGMatch_Model, self).__init__(opt)
 
     def feed_data(self, data):
         cache_dir = self.opt['networks']['feature_extractor'].get('cache_dir', None)
-        cache_operators(data, cache_dir=cache_dir)
+        # Load Q connection operators if enabled
+        cache_operators(
+            data, cache_dir=cache_dir,
+            complex_cache_dir=self.complex_cache_dir,
+            use_complex_fmap=self.use_complex_fmap,
+            n_conn=self.n_conn
+        )
         # get data pair
         data_x, data_y = to_device(data['first'], self.device), to_device(data['second'], self.device)
 
@@ -128,6 +185,57 @@ class SGMatch_Model(BaseModel):
             self.loss_metrics['l_d'] = self.losses['dirichlet_loss'](torch.bmm(Pxy, verts_y), Lx) + \
                                        self.losses['dirichlet_loss'](torch.bmm(Pyx, verts_x), Ly)
 
+        # ------------------- Jacobian (local distortion) Loss ------------------- #
+        if self.jacobian_loss is not None:
+            jac = self.jacobian_loss(
+                data_x['verts'], data_y['verts'], Pxy, data_x['faces'])
+            self.loss_metrics['l_J_det'] = jac['l_det']
+            self.loss_metrics['l_J_distortion'] = jac['l_distortion']
+            # monitoring only, excluded from the total loss
+            self.loss_metrics['J_flip_rate'] = jac['flip_rate']
+            self.loss_metrics['J_mean_distortion'] = jac['mean_distortion']
+
+        # ------------------- Q (Complex Functional Map) Section ------------------- #
+        # Scheme B: Q uses geometric features (f_geo) before CrossAttention fusion
+        if self.use_complex_fmap and self.w_q_orth > 0:
+            try:
+                if not _Q_AVAILABLE:
+                    raise RuntimeError(
+                        'use_complex_fmap=True but connection_laplacian not available')
+                
+                # Get Q spectral operators
+                spec_grad_x = data_x['operators']['spec_grad']  # [K_conn, Nx]
+                spec_grad_y = data_y['operators']['spec_grad']  # [K_conn, Ny]
+                conn_evecs_x = data_x['operators']['conn_evecs']  # [Nx, K_conn]
+                conn_evecs_y = data_y['operators']['conn_evecs']  # [Ny, K_conn]
+                
+                # Project geometric features to connection spectral basis
+                # spec_grad @ f_geo -> [K_conn, Ny] matrix in connection coefficients
+                # Note: f_geo shape is [B, Nx, C], project each batch sample individually
+                B = f_geo_x.shape[0]
+                feat_x_complex = spec_grad_x @ f_geo_x.squeeze(0).to(torch.complex128)  # [K_conn, Nx]
+                feat_y_complex = spec_grad_y @ f_geo_y.squeeze(0).to(torch.complex128)  # [K_conn, Ny]
+                
+                # Compute Q_XY: from Y to X (inverse direction for Π_YX)
+                Qxy = feat_y_complex @ torch.linalg.pinv(feat_x_complex)  # [K_conn, K_conn]
+                
+                # Q orthogonal loss: ||Q^H Q - I||_F^2
+                I_conn = torch.eye(self.n_conn, dtype=torch.complex128, device=Qxy.device)
+                Q_ortho = Qxy.mH @ Qxy  # [K_conn, K_conn]
+                l_Q_orth = torch.norm(Q_ortho - I_conn, p='fro') ** 2
+                
+                self.loss_metrics['l_Q_ortho'] = l_Q_orth
+                if self.q_verbose:
+                    print(f"[Q] l_Q_ortho={l_Q_orth.item():.6f}")
+                
+            except Exception as e:
+                msg = f'Complex-Q computation failed: {e}'
+                if not self._q_failed_once:
+                    self._q_failed_once = True
+                    raise RuntimeError(msg)
+                else:
+                    print(f'[WARNING] {msg}')
+                    self.loss_metrics['l_Q_ortho'] = torch.tensor(0.0, device=self.device)
 
         # ------------------- flow matching section ------------------- #
         B, _, C_geo = hx.shape
@@ -291,11 +399,21 @@ class SGMatch_Model(BaseModel):
             self.loss_metrics['l_elas_orth'] *= w_elas
             self.loss_metrics['l_elas_align'] *= w_elas
 
+        # Q branch weight (only acts as a switch in feed_data; real weight applies here)
+        if 'l_Q_ortho' in self.loss_metrics and self.w_q_orth > 0:
+            self.loss_metrics['l_Q_ortho'] = self.loss_metrics['l_Q_ortho'] * self.w_q_orth
+
+        # Jacobian loss weights (flip rate / mean distortion are metrics only)
+        if 'l_J_det' in self.loss_metrics:
+            self.loss_metrics['l_J_det'] = self.loss_metrics['l_J_det'] * self.w_jacobian_det
+            self.loss_metrics['l_J_distortion'] = self.loss_metrics['l_J_distortion'] * self.w_jacobian_distortion
+
         # compute total loss
         loss = 0.0
         for k, v in self.loss_metrics.items():
-            if k != 'l_total':
-                loss += v
+            if k in ('l_total', 'J_flip_rate', 'J_mean_distortion'):
+                continue
+            loss += v
 
         # update loss metrics
         self.loss_metrics['l_total'] = loss
