@@ -137,6 +137,9 @@ data/
 experiments/
 results/
 
+# locally trained checkpoints
+checkpoints/scape_*.pth
+
 # pycharm
 .idea/
 
